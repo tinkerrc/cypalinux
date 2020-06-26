@@ -7,77 +7,71 @@ pass="WRhSzWm/eylpE" # "CyPaPaWd1920!@#"
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 ID=$(date +"%H%M")
 BACKUP=$BASE/backup/$ID/
-mkdir -p $BACKUP
-mkdir -p $BASE/reports
+mkdir -p "$BACKUP"
+mkdir -p "$BASE"/reports
 
 todo () {
     # Leave the terminal window, following the instruction
-    printf "\033[0;31mTODO:\033[0m $@"
-    read -p '->>'
+    printf "\033[0;31mTODO:\033[0m %s\n" "$@"
+    read -rp '->>'
 }
 ready() {
     # Basically: Are you ready?
-    printf "\033[0;35mREADY:\033[0m $@"
-    read -p '-?>'
+    printf "\033[0;35mREADY:\033[0m %s\n" "$@"
+    read -rp '-?>'
 }
 backup() {
-    printf "Backing up $1"
-    cp -a $1 $BACKUP
+    printf "Backing up %s\n" "$1"
+    cp -a "$1" "$BACKUP"
 }
 section () {
     echo ''
     echo "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-"
     echo 'Wait for Scoring Report to update...'
-    sleep 15
-    ready "Record the scoring report"
-    vim $BASE/reports/$(date +"%H:%M:%S")
+    todo "Record the scoring report"
+    #vim $BASE/reports/$(date +"%H:%M:%S")
     clear
     for i in $BASE/reports/*
     do
         echo "$i: " $(wc -l $i) "vulns"
     done
     clear
-    printf " ===== $1 ===== "
-    read -p '>>'
+    printf " ===== %s ===== " "$1"
+    read -rp '>>'
 }
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 echo " ===== Introduction ===== "
-echo CyberPatriot Semifinals Round Linux Script
-echo Walnut CSC
-echo Zhenkai Weng
+echo Walnut CSC Linux Hardening for CyberPaatriot
 echo "** Requires root Permissions **"
 if [ ! $(whoami) = "root" ];
 then
     echo "Please try again with root priviliges..."
     exit 1
 fi
-echo "Backing up files"
 todo "check if vim exists"
+echo "Backing up files"
 backup /etc
-# backup /etc/passwd
-# backup /etc/group
-# backup /etc/ssh/sshd_config
-# backup /etc/login.defs
 todo "Read README thoroughly"
 todo "Do Forensic Questions..."
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 section "User Auditing"
-echo "Locking root login"
+echo "Locking root account"
 passwd -l root > /dev/null
+#usermod --expiredate 1 root > /dev/null
 ready "Enter allowed user in vim after [ENTER] ...\nNote: Don't put the auto-login account in there!"
 vim $BASE/auth-users
 sort $BASE/auth-users > $BASE/auth-users
 IFS=$'\r\n' GLOBIGNORE='*' command eval  'AUTH_USERS=($(cat $BASE/auth-users))'
-mapfile -t UNCHECKED_USERS < <(^Cwk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd )
+mapfile -t UNCHECKED_USERS < <(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd )
 for usr in "${UNCHECKED_USERS[@]}"
 do
     if [[ ! "${AUTH_USERS[@]}" =~ "$usr" ]]; then
         echo "Delete unauthenticated user $usr?"
         select yn in "Yes" "No"; do
             case $yn in
-                Yes ) userdel $usr; continue;
+                Yes ) userdel $usr 
             esac
         done
     fi
@@ -98,6 +92,14 @@ grep sudo /etc/group
 ready "Inspect"
 vim /etc/group
 
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+section "visudo"
+#echo "Copy the following lines:"
+#echo "Defaults log_output"
+#echo "Defaults!/usr/bin/sudoreplay !log_output"
+#echo "Defaults!/sbin/reboot !log_output"
+ready "Press [ENTER] to launch visudo"
+sudo visudo
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 section "Update unattended upgrades"
@@ -132,7 +134,7 @@ for file in ${media_files[@]}
 do
     echo "--> $file"
 done
-read -p "Delete these files? [y/N] " flag
+read -rp "Delete these files? [y/N] " flag
 if [ $flag = "y" ];
 then
     echo "Deleting media files in 5s... "
@@ -149,7 +151,7 @@ bash
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 section "Disable guest login... "
-read -p "OS = Ubuntu with lightdm?" flag
+read -rp "OS = Ubuntu with lightdm?" flag
 if [ $flag = "y" ];
 then
     ready
@@ -180,6 +182,7 @@ ufw allow http
 ufw allow https
 ufw default deny incoming
 ufw default allow outgoing
+ufw reject telnet
 echo "Allows outgoing traffic by default"
 echo "Denies incoming traffic by default"
 echo "Allows: SSH, HTTP, HTTPS"
@@ -220,7 +223,7 @@ bash
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 section "Software Audit"
-read -p "Should apache2 be removed? [y/N] " flag
+read -rp "Should apache2 be removed? [y/N] " flag
 if [ $flag = "y" ];
 then
     echo "Removing apache2..."
@@ -229,7 +232,7 @@ else
     echo "Will not remove apache2."
 fi
 
-read -p "Should samba be removed? [y/N] " flag
+read -rp "Should samba be removed? [y/N] " flag
 if [ $flag = "y" ];
 then
     echo "Removing samba..."
@@ -238,7 +241,7 @@ else
     echo "Will not remove samba."
 fi
 
-read -p "Should vsftpd/openssh-sftp-server be removed? [y/N] " flag
+read -rp "Should vsftpd/openssh-sftp-server be removed? [y/N] " flag
 if [ $flag = "y" ];
 then
     echo "Removing vsftpd..."
@@ -306,10 +309,14 @@ ready "Rkhunter check"
 apt -my install rkhunter >/dev/null
 rkhunter --check
 
+#
+sudo apt install
+
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 section "Find more checklists"
 # TODO: look for checklists in walnut csc folder; integrate into script
 # TODO: integrate starred checklist in drive (Ubuntu checklist (cypa))
+todo "run lynis"
 todo "in gdm3 greeter defaults config, disable-user-list=true"
 todo "check executables with find / -perm /4000 2>/dev/null"
 todo "ensure ufw allows critical servers"
@@ -319,4 +326,13 @@ todo "add a grub password, check signature"
 todo "secure fstab"
 todo "use chage if needed"
 todo "secure shm (shared memory) in fstab"
-todo contact\ josephxu1234@gmail.com 
+todo "PAM module backdoor?"
+todo "setup auditd?"
+todo "malicious kernel modules?"
+todo "malicious aliases?"
+todo "check /etc/skel"
+todo "check /etc/adduser.conf"
+todo "generate ssh key"
+todo "install scap workbench and scan the system"
+todo "run openvas"
+todo "run https://github.com/openstack/ansible-hardening"
