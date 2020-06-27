@@ -68,12 +68,13 @@ mapfile -t UNCHECKED_USERS < <(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}'
 for usr in "${UNCHECKED_USERS[@]}"
 do
     if [[ ! "${AUTH_USERS[@]}" =~ "$usr" ]]; then
-        echo "Delete unauthenticated user $usr?"
-        select yn in "Yes" "No"; do
-            case $yn in
-                Yes ) userdel $usr 
-            esac
-        done
+        echo $usr is unauthenticated
+#       echo "Delete unauthenticated user $usr?"
+#       select yn in "Yes" "No"; do
+#           case $yn in
+#               Yes ) userdel $usr 
+#           esac
+#       done
     fi
     usermod $usr --password $pass
 
