@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ ! $(whoami) = "root" ]; then
-    echo "Please try again with root priviliges..."
+    echo Please try again with root priviliges...
     exit 1
 fi
 
@@ -57,7 +57,7 @@ ensure_python() {
 }
 
 backup() {
-    echo "Backing up files..."
+    echo Backing up files...
     BACKUP=/backup
     mkdir -p $BACKUP
     cp -a /home $BACKUP
@@ -164,7 +164,7 @@ lightdm_disable_guest() {
     cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
 }
 
-do_unattended_upgrades() {
+config_unattended_upgrades() {
     apt install -y unattended-upgrades
     dir=/etc/apt/apt.conf.d
     mkdir -p "$dir" # should already be ther
@@ -362,9 +362,15 @@ suggestions() {
     todo "run https://github.com/openstack/ansible-hardening"
 }
 
+inspect_hosts() {
+    ready "Inspect /etc/hosts"
+    vim /etc/hosts
+}
+
 harden() {
+    echo Walnut High School CyberPatriot Linux Hardening Script
     if ! [ -d "$BASE/rc" ]; then
-        echo "The resources directory is missing"
+        echo The resources directory is missing
         exit 1
     fi
     todo "Launch a root shell in another terminal in case something goes wrong"
@@ -382,13 +388,14 @@ harden() {
     run_once inspect_passwd
     run_once inspect_group
     run_once inspect_sudoer
+    run_once inspect_hosts
     ensure_ssh_is_running
     run_once inspect_ssh_config
     ensure_ssh_is_running
     run_once rm_media_files
     run_once find_pw_text_files
     run_once lightdm_disable_guest
-    run_once do_unattended_upgrades
+    run_once config_unattended_upgrades
     run_once inspect_apt_src
     run_once firewall
     run_once inspect_svc
@@ -408,6 +415,6 @@ harden() {
 
 harden
 
-echo 'A root shell for your convenience'
 # keep a root shell in case something goes wrong
+echo 'A root shell for your convenience'
 bash
