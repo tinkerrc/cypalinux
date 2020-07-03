@@ -144,12 +144,26 @@ ensure_ssh_is_installed() {
 }
 
 rm_media_files() {
-    find /home -name "*.mp3" -name "*.ogg" -name "*.mp4" -name "*.m4r" -name "*.jp*" -name "*.png" -name "*.txt" > "$DATA/banned_files"
+    find /home -type f \( \
+        -name "*.mp3" -o \
+        -name "*.mov" -o \
+        -name "*.mp4" -o \
+        -name "*.avi" -o \
+        -name "*.mpg" -o \
+        -name "*.mpeg" -o \
+        -name "*.flac" -o \
+        -name "*.m4a" -o \
+        -name "*.flv" -o \
+        -name "*.ogg" -o \
+        -name "*.gif" -o \
+        -name "*.png" -o \
+        -name "*.jpg" -o \
+        -name "*.jpeg" \) > "$DATA/banned_files"
     python3 "$BASE/rmfiles.py" "$DATA/banned_files"
 }
 
 find_pw_text_files() {
-    ready "Try to find, backup, and remove suspicious files (e.g., grep -rwni P@a5w0rD)"
+    ready "Try to find, backup, and remove suspicious files (e.g., cd /home; grep -rwni P@a5w0rD)"
     bash
 }
 
@@ -228,7 +242,7 @@ config_common() {
     cat "$BASE/rc/common-auth" > /etc/pam.d/common-auth
     cat "$BASE/rc/login.defs" > /etc/login.defs
     cat "$BASE/rc/host.conf" > /etc/host.conf
-    echo PAM, login.defs, and host.conf have been copied
+    echo PAM config, login.defs, and host.conf have been installed
 }
 
 audit_pkgs() {
@@ -285,6 +299,9 @@ inspect_cron() {
     elif [[ -d /var/spool/cron/ ]]; then
         cd /var/spool/cron/
         bash
+    else
+        echo No known crontabs directory found.
+        bash
     fi
     ready "Check periodic crons (e.g., /etc/cron.hourly)"
     cd /etc
@@ -317,7 +334,7 @@ fix_file_perms() {
     chmod og-rwx /etc/cron.monthly
     chown root:root /etc/cron.d
     chmod og-rwx /etc/cron.d
-    echo System file permissions corrected
+    echo Common system file permissions corrected
 }
 
 run_lynis() {
