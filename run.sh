@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Zhenkai Weng - Walnut HS CSC
+
 set -euo pipefail
 
 if [ ! "$(whoami)" = "root" ]; then
@@ -7,7 +9,7 @@ if [ ! "$(whoami)" = "root" ]; then
 fi
 
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DATA="$HOME/.dat"
+DATA="$HOME/.harden"
 mkdir -p "$DATA"
 
 todo () {
@@ -50,7 +52,7 @@ readme() {
     todo "Read README file"
 }
 
-ensure_python() {
+ensure_python3() {
     echo Checking python3 installation...
     if ! python3 --version; then
         ready "Try installing python3"
@@ -66,7 +68,7 @@ backup() {
     mkdir -p $BACKUP
     cp -a /home $BACKUP
     cp -a /etc $BACKUP
-    echo /etc and /home are backed up into $BACKUP
+    echo NOTE: /etc and /home are backed up into $BACKUP
 }
 
 lock_root() {
@@ -125,11 +127,12 @@ inspect_sudoer() {
 inspect_ssh_config() {
     ready "Diff sshd config"
     vim -d /etc/ssh/sshd_config "$BASE/rc/sshd_config"
+    service ssh restart || true
     echo sshd config complete
 }
 
 ensure_ssh_is_running() {
-    service ssh restart
+    service ssh restart || true
     if ! pgrep ssh > /dev/null; then
         ready "Ensure sshd is running"
         bash
@@ -137,10 +140,12 @@ ensure_ssh_is_running() {
 }
 
 ensure_ssh_is_installed() {
-    echo Installing openssh-server
-    apt install -y openssh-server > /dev/null
-    service ssh start
-    echo Installation complete
+    if ! [ -x /usr/bin/sshd ]; then
+        echo Installing openssh-server
+        apt install -y openssh-server > /dev/null
+        service ssh start || true
+        echo Installation complete
+    fi
 }
 
 rm_media_files() {
@@ -205,7 +210,7 @@ firewall() {
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         touch "$DATA/$1"
     fi
-    apt install -y ufw
+    apt install -y ufw iptables
     ufw enable
     ufw allow ssh
     ufw default deny incoming
@@ -215,7 +220,7 @@ firewall() {
     echo Denies incoming traffic by default
     echo "Allow   :  SSH"
     echo "Reject  :  Telnet"
-    ready "Further modify UFW settings according to README"
+    ready "Further modify UFW settings according to README (e.g., ufw allow 80)"
     bash
 }
 
@@ -270,15 +275,19 @@ audit_pkgs() {
         echo "Will not remove vsftpd/openssh-sftp-server."
     fi
 
-    ready "Press [ENTER] to remove: hydra nmap zenmap john ftp telnet bind9 medusa vino netcat*"
+    ready "Press [ENTER] to remove: hydra nmap zenmap john ftp telnet bind9 medusa vino ncat netcat* ophcrack"
     echo "Removing in 5s"
     sleep 5
-    apt -my purge hydra nmap zenmap john ftp telnet bind9 medusa vino netcat* > /dev/null
-    ready "Look for any disallowed or unnecessary package (e.g., mysql postgre php)"
+    apt -my purge hydra nmap zenmap john ftp telnet bind9 medusa vino ncat netcat* ophcrack > /dev/null
+    ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
+    echo "Installing additional packages..."
+    apt install apparmor apparmor-profiles clamav rkhunter chkrootkit
     read -rp "Run apt upgrade?"
     if [[ $REPLY = "y" ]]; then
-        apt update && apt upgrade
+        apt update -y
+        apt upgrade -y
+        apt autoremove -y
     fi
 }
 
@@ -321,20 +330,24 @@ fix_file_perms() {
     chmod 700 /boot
 
     chown root:root /etc/anacrontab
-    chmod og-rwx /etc/anacrontab
+    chmod 640 /etc/anacrontab
     chown root:root /etc/crontab
-    chmod og-rwx /etc/crontab
+    chmod 640 /etc/crontab
     chown root:root /etc/cron.hourly
-    chmod og-rwx /etc/cron.hourly
+    chmod 640 /etc/cron.hourly
     chown root:root /etc/cron.daily
-    chmod og-rwx /etc/cron.daily
+    chmod 640 /etc/cron.daily
     chown root:root /etc/cron.weekly
-    chmod og-rwx /etc/cron.weekly
+    chmod 640 /etc/cron.weekly
     chown root:root /etc/cron.monthly
-    chmod og-rwx /etc/cron.monthly
+    chmod 640 /etc/cron.monthly
     chown root:root /etc/cron.d
-    chmod og-rwx /etc/cron.d
+    chmod 640 /etc/cron.d
     echo Common system file permissions corrected
+
+    ready "Inspect /home and /home/* owners and permissions"
+    bash
+    echo "Inspection complete"
 }
 
 run_lynis() {
@@ -346,7 +359,7 @@ run_lynis() {
     clear
     ready 'Start lynis'
     ./lynis audit system
-    ready "Inspect"
+    ready "Inspect; run lynis scans under other modes if necessary"
     bash
 }
 
@@ -364,16 +377,18 @@ run_linenum() {
 }
 
 suggestions() {
+    todo "note: chage -d 0 to force reset password on next login"
+    todo "consider adding a warning banner in /etc/issue.net (then add 'Banner issue.net' to sshd_config)"
     todo "in gdm3 greeter defaults config, disable-user-list=true"
+    todo "apache2 - add ModEvasive and ModSecurity modules"
     todo "check executables with find / -perm /4000 2>/dev/null"
-    todo "Install antimalware/rootkit programs; chkrootkit / rkhunter"
+    todo "Install antimalware/rootkit programs; chkrootkit / rkhunter / clamav (freshclam)"
     todo "ensure ufw allows critical servers"
     todo "check sticky bit perm"
     todo "set apt settings see phone picture"
     todo "add a grub password, check signature"
     todo "secure fstab"
     todo "use chage if necessary"
-    todo "secure shm (shared memory) in fstab"
     todo "PAM module backdoor?"
     todo "setup auditd?"
     todo "malicious kernel modules?"
@@ -404,13 +419,53 @@ inspect_netcat() {
     echo 'Netcat inspection complete'
 }
 
+secure_fs() {
+    echo "tmpfs      /dev/shm    tmpfs   defaults,noexec,nodev,nosuid   0 0" >> /etc/fstab
+    (umount /dev/shm && mount /dev/shm) || echo Failed to remount /dev/shm with new settings
+    ready "Inspect /etc/fstab"
+    vim /etc/fstab
+}
+
+config_fail2ban() {
+    apt install -y fail2ban
+    touch /etc/fail2ban/jail.local
+    cat "$BASE/rc/jail.local" > jail.local
+    service fail2ban restart
+}
+
+config_php() {
+    echo --PHP configuration--
+    if php --version >/dev/null; then
+        read -rp "Enter php config location (hint: php --ini): " PHPCONF
+        ready "Inspect PHP config (original | suggested)"
+        vim -O "$PHPCONF" "$BASE/rc/php.ini"
+    else
+        echo "PHP not found. No actions necessary."
+    fi
+}
+
+inspect_startup() {
+    echo --Inspect Start-up Scripts--
+    if [ -f /etc/rc.local ]; then
+        ready "Inspect /etc/rc.local"
+        vim /etc/rc.local
+    fi
+    if [ -d /etc/init.d ]; then
+        ready "Inspect /etc/init.d/"
+        vim /etc/init.d
+    fi
+    echo "Inspection complete"
+}
+
 harden() {
     echo Walnut High School CSC CyberPatriot Linux Hardening Script
     if ! [ -d "$BASE/rc" ]; then
         echo The resources directory is missing
         exit 1
     fi
+
     todo "Launch a root shell in another terminal in case something goes wrong"
+    run_once inspect_apt_src
     echo Updating package lists...
     apt update
     clear
@@ -419,7 +474,7 @@ harden() {
     run_once ensure_ssh_is_installed
     ensure_ssh_is_running
     run_once backup
-    run_once ensure_python
+    run_once ensure_python3
 
     # Get started
     run_once readme
@@ -433,17 +488,17 @@ harden() {
     run_once inspect_group
     run_once inspect_sudoer
 
-    # SSH server config
+    # Service config
     ensure_ssh_is_running
     run_once inspect_ssh_config
     ensure_ssh_is_running
+    run_once config_php
 
     # Disallowed files
     run_once rm_media_files
     run_once find_pw_text_files
 
     # Software auditing
-    run_once inspect_apt_src
     run_once config_unattended_upgrades
     run_once audit_pkgs
 
@@ -454,6 +509,9 @@ harden() {
     run_once firewall
     run_once config_sysctl
     run_once config_common
+    run_once secure_fs
+    run_once config_fail2ban
+    run_once inspect_startup
 
     # Abnormality
     run_once inspect_svc

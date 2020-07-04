@@ -1,5 +1,6 @@
 Port 22
 Protocol 2
+DebianBanner no
 HostKey /etc/ssh/ssh_host_rsa_key
 HostKey /etc/ssh/ssh_host_dsa_key
 HostKey /etc/ssh/ssh_host_ecdsa_key
@@ -8,7 +9,7 @@ UsePrivilegeSeparation yes
 KeyRegenerationInterval 3600
 ServerKeyBits 1024
 SyslogFacility AUTH
-LogLevel INFO
+LogLevel VERBOSE
 LoginGraceTime 120
 PermitRootLogin no
 StrictModes yes
@@ -19,7 +20,7 @@ RhostsRSAAuthentication no
 HostbasedAuthentication no
 PermitEmptyPasswords no
 ChallengeResponseAuthentication no
-PasswordAuthentication no
+PasswordAuthentication yes # or 'no', depends
 X11Forwarding no
 X11DisplayOffset 10
 PrintMotd no
@@ -28,3 +29,7 @@ TCPKeepAlive yes
 AcceptEnv LANG LC_*
 Subsystem sftp /usr/lib/openssh/sftp-server
 UsePAM yes
+AllowTcpForwarding no
+UseDNS no
+ClientAliveInterval 300
+ClientAliveCountMax 0
