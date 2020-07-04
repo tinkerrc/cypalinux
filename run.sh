@@ -130,7 +130,7 @@ inspect_ssh_config() {
 
 ensure_ssh_is_running() {
     service ssh restart
-    if ! pgrep ssh; then
+    if ! pgrep ssh > /dev/null; then
         ready "Ensure sshd is running"
         bash
     fi
@@ -365,14 +365,14 @@ run_linenum() {
 
 suggestions() {
     todo "in gdm3 greeter defaults config, disable-user-list=true"
-    todo "run LinEnum.sh; see if anything interesting comes up"
     todo "check executables with find / -perm /4000 2>/dev/null"
+    todo "Install antimalware/rootkit programs; chkrootkit / rkhunter"
     todo "ensure ufw allows critical servers"
     todo "check sticky bit perm"
     todo "set apt settings see phone picture"
     todo "add a grub password, check signature"
     todo "secure fstab"
-    todo "use chage if needed"
+    todo "use chage if necessary"
     todo "secure shm (shared memory) in fstab"
     todo "PAM module backdoor?"
     todo "setup auditd?"
@@ -389,6 +389,19 @@ suggestions() {
 inspect_hosts() {
     ready "Inspect /etc/hosts"
     vim /etc/hosts
+}
+
+inspect_netcat() {
+    if pgrep nc > /dev/null; then
+        ready "View netcat backdoors"
+        echo ----
+        pgrep -a nc
+        echo ----
+        bash
+    else
+        echo 'No netcat processes found'
+    fi
+    echo 'Netcat inspection complete'
 }
 
 harden() {
@@ -446,6 +459,7 @@ harden() {
     run_once inspect_svc
     run_once inspect_ports
     run_once inspect_cron
+    run_once inspect_netcat
 
     # Scan
     run_once run_lynis
