@@ -10,7 +10,9 @@ fi
 
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DATA="$HOME/.harden"
+BACKUP=/backup
 mkdir -p "$DATA"
+mkdir -p "$BACKUP"
 
 todo () {
     # Follow the instruction; might have to leave terminal
@@ -64,8 +66,6 @@ ensure_python3() {
 
 backup() {
     echo Backing up files...
-    BACKUP=/backup
-    mkdir -p $BACKUP
     cp -a /home $BACKUP
     cp -a /etc $BACKUP
     cp -a /var $BACKUP

@@ -26,6 +26,6 @@ with open(unauthed_file, "w") as f:
       if user not in authed:
          answer = input("Found unauthorized user " + user + ", remove? [y/N] ").lower()
          if answer == 'y':
-            subprocess.call(['deluser', "-r", user])
+            subprocess.call(['deluser', "--remove-home", user])
             f.write(user + "\n")
       subprocess.call(['usermod', '-p', pw, user])
