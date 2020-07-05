@@ -458,7 +458,9 @@ inspect_startup() {
 }
 
 harden() {
-    echo Walnut High School CSC CyberPatriot Linux Hardening Script
+    echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
+    echo " - Data directory: $DATA"
+    echo " - Base directory: $BASE"
     if ! [ -d "$BASE/rc" ]; then
         echo The resources directory is missing
         exit 1

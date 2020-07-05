@@ -9,7 +9,7 @@ if os.geteuid() != 0:
 
 files = []
 with open(sys.argv[1], 'r') as f:
-    files = filter(None, f.read().split('\n'))
+    files = list(filter(None, f.read().split('\n')))
 
 for f in files:
     answer = input("Remove file '" + f + "'? [Y/n] ").lower()
