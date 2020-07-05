@@ -20,6 +20,6 @@ with open(sys.argv[3], "w") as f:
       if user not in authed:
          answer = input("Found unauthorized user " + user + ", remove? [y/N] ").lower()
          if answer == 'y':
-            subprocess.run(['deluser', "-r", user])
+            subprocess.call(['deluser', "-r", user])
       pw = sys.argv[4]
-      subprocess.run(['usermod', '-p', pw, user])
+      subprocess.call(['usermod', '-p', pw, user])

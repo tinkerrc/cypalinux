@@ -14,4 +14,4 @@ with open(sys.argv[1], 'r') as f:
 for f in files:
     answer = input("Remove file '" + f + "'? [Y/n] ").lower()
     if answer != 'n':
-        subprocess.run(['rm', f])
+        subprocess.call(['rm', f])
