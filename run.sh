@@ -14,14 +14,14 @@ mkdir -p "$DATA"
 
 todo () {
     # Follow the instruction; might have to leave terminal
-    echo -e "\033[0;31mTODO:\033[0m $*\n"
-    read -rp '->>'
+    echo -e "\033[0;31mTODO:\033[0m $*"
+    read -rp "Press [ENTER] when you finish"
 }
 
 ready() {
     # Wait for user to be ready
-    echo -e "\033[0;35mGET READY:\033[0m $*\n"
-    read -rp '-?>'
+    echo -e "\033[0;35mREADY:\033[0m $*"
+    read -rp "Press [ENTER] when you are ready"
 }
 
 # in case the script is stopped midway
