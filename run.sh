@@ -68,7 +68,8 @@ backup() {
     mkdir -p $BACKUP
     cp -a /home $BACKUP
     cp -a /etc $BACKUP
-    echo NOTE: /etc and /home are backed up into $BACKUP
+    cp -a /var $BACKUP
+    echo NOTE: /etc /var and /home are backed up into $BACKUP
 }
 
 lock_root() {
@@ -127,12 +128,14 @@ inspect_sudoer() {
 inspect_ssh_config() {
     ready "Diff sshd config"
     vim -d /etc/ssh/sshd_config "$BASE/rc/sshd_config"
-    service ssh restart || true
+    echo Validating...
+    echo Restarting service
+    service ssh restart
     echo sshd config complete
 }
 
 ensure_ssh_is_running() {
-    service ssh restart || true
+    service ssh restart
     if ! pgrep ssh > /dev/null; then
         ready "Ensure sshd is running"
         bash
@@ -143,28 +146,38 @@ ensure_ssh_is_installed() {
     if ! [ -x /usr/bin/sshd ]; then
         echo Installing openssh-server
         apt install -y openssh-server > /dev/null
-        service ssh start || true
+        service ssh restart
         echo Installation complete
     fi
 }
 
 rm_media_files() {
-    find /home -type f \( \
-        -name "*.mp3" -o \
-        -name "*.mov" -o \
-        -name "*.mp4" -o \
-        -name "*.avi" -o \
-        -name "*.mpg" -o \
-        -name "*.mpeg" -o \
-        -name "*.flac" -o \
-        -name "*.m4a" -o \
-        -name "*.flv" -o \
-        -name "*.ogg" -o \
-        -name "*.gif" -o \
-        -name "*.png" -o \
-        -name "*.jpg" -o \
-        -name "*.jpeg" \) > "$DATA/banned_files"
-    python3 "$BASE/rmfiles.py" "$DATA/banned_files"
+    if [ -d "$BACKUP/home" ]; then
+        # /home is backed up, so directly deleting it is safe
+        find /home -type f \( \
+            -name "*.aac" -o \
+            -name "*.avi" -o \
+            -name "*.flac" -o \
+            -name "*.flv" -o \
+            -name "*.gif" -o \
+            -name "*.jpeg" -o \
+            -name "*.jpg" -o \
+            -name "*.m4a" -o \
+            -name "*.mkv" -o \
+            -name "*.mov" -o \
+            -name "*.mp3" -o \
+            -name "*.mp4" -o \
+            -name "*.mpeg" -o \
+            -name "*.mpg" -o \
+            -name "*.ogg" -o \
+            -name "*.png" -o \
+            -name "*.rmvb" -o \
+            -name "*.wma" -o \
+            -name "*.wmv" \
+            \) -delete -print > "$DATA/banned_files"
+    else
+        echo "$BACKUP/home not found. Skipped media files scanning."
+    fi
 }
 
 find_pw_text_files() {
@@ -286,14 +299,18 @@ audit_pkgs() {
     read -rp "Run apt upgrade?"
     if [[ $REPLY = "y" ]]; then
         apt update -y
-        apt upgrade -y
+        apt dist-upgrade -y
         apt autoremove -y
     fi
 }
 
 inspect_ports() {
     ready "Inspect ports"
-    netstat -plnt
+    echo ----
+    netstat -plunt
+    echo ----
+    lsof -i -n -P
+    echo ----
     ready "Inspect"
     bash
 }
@@ -457,12 +474,71 @@ inspect_startup() {
     echo "Inspection complete"
 }
 
+restrict_cron() {
+    echo 'Setting allowed cron/at users to root'
+    crontab -r # reset crontabs
+    # only root can use cron & at
+    echo root > /etc/cron.allow
+    echo root > /etc/at.allow
+    chmod 644 /etc/{cron,at}.allow
+    echo Done!
+}
+
+config_apache() {
+    echo 'Securing apache2 config'
+    if [ -f /etc/apache2/apache2.conf ]; then
+        {
+            echo "<Directory />"
+            echo "        AllowOverride None"
+            echo "        Order Deny,Allow"
+            echo "        Deny from all"
+            echo "</Directory>"
+            echo "UserDir disabled root"
+        } >> /etc/apache2/apache2.conf
+        echo "Success."
+
+        ready "Inspect config"
+        vim /etc/apache2/apache2.conf
+
+        echo Restarting apache2
+        service apache2 restart
+    else
+        echo "No apache2 config found"
+    fi
+    echo Done
+}
+
+inspect_resolv() {
+    ready "Inspect /etc/resolv.conf; use 8.8.8.8 for nameserver"
+    vim /etc/resolv.conf
+    echo Done
+}
+
+av_scan() {
+    echo --AV Scans--
+    ready "Start chkrootkit scan"
+    chkrootkit
+
+    ready "Start rkhunter scan"
+    rkhunter --update
+    rkhunter --propupd
+    rkhunter -c --enable all --disable none
+
+    ready "Start ClamAV scan"
+    freshclam --stdout
+    clamscan -r -i --stdout --exclude-dir="^/sys" /
+}
+
 harden() {
     echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
     echo " - Data directory: $DATA"
     echo " - Base directory: $BASE"
     if ! [ -d "$BASE/rc" ]; then
-        echo The resources directory is missing
+        echo "The resources directory is missing"
+        exit 1
+    fi
+    if ! service --status-all >/dev/null; then
+        echo "service command not found. Is the system using systemd?"
         exit 1
     fi
 
@@ -491,6 +567,7 @@ harden() {
     run_once inspect_sudoer
 
     # Service config
+    run_once config_apache
     ensure_ssh_is_running
     run_once inspect_ssh_config
     ensure_ssh_is_running
@@ -505,6 +582,8 @@ harden() {
     run_once audit_pkgs
 
     # Miscellaneous
+    run_once inspect_resolv
+    run_once restrict_cron
     run_once inspect_hosts
     run_once lightdm_disable_guest
     run_once fix_file_perms
@@ -528,6 +607,7 @@ harden() {
     # Last-minute suggestions
     ensure_ssh_is_running
     run_once suggestions
+    run_once av_scan || bash
     echo Done!
 }
 
