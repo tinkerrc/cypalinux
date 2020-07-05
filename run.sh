@@ -14,13 +14,13 @@ mkdir -p "$DATA"
 
 todo () {
     # Follow the instruction; might have to leave terminal
-    printf "\033[0;31mTODO:\033[0m %s\n" "$@"
+    echo -e "\033[0;31mTODO:\033[0m $*\n"
     read -rp '->>'
 }
 
 ready() {
     # Wait for user to be ready
-    printf "\033[0;35mREADY:\033[0m %s\n" "$@"
+    echo -e "\033[0;35mGET READY:\033[0m $*\n"
     read -rp '-?>'
 }
 

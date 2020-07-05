@@ -12,6 +12,6 @@ with open(sys.argv[1], 'r') as f:
     files = filter(None, f.read().split('\n'))
 
 for f in files:
-    answer = input(f"Remove file '{f}'? [Y/n] ").lower()
+    answer = input("Remove file '" + f + "'? [Y/n] ").lower()
     if answer != 'n':
         subprocess.run(['rm', f])

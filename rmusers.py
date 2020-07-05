@@ -18,7 +18,7 @@ with open(sys.argv[2], "r") as f:
 with open(sys.argv[3], "w") as f:
    for user in unchecked:
       if user not in authed:
-         answer = input(f"Found unauthorized user {user}, remove? [y/N] ").lower()
+         answer = input("Found unauthorized user " + user + ", remove? [y/N] ").lower()
          if answer == 'y':
             subprocess.run(['deluser', "-r", user])
       pw = sys.argv[4]
