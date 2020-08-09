@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-source "$(dirname $0)/common.sh"
-
 if [[ $_ != $0 ]]; then
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh'"
 fi
+
+source "$(dirname $0)/common.sh"
 
 # ===================================
 # CyPa Hardening Script (Team 1)
