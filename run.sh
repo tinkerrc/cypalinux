@@ -617,6 +617,7 @@ inspect_unit_files() {
 harden() {
     # TODO: prepend vim-editing with chmod if necessary
 
+    # TODO: see https://github.com/Ryan-Galligher/CyberPatriot/blob/master/CyberPatriotScript
     # TODO: improve apache2 default config & setup; install security-related modules
     # TODO: add secure config for all 3 common FTP servers; always use vimdiff and don't cp
     # TODO: secure LAMP stack
