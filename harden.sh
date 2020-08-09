@@ -49,7 +49,6 @@ section_preliminaries() {
     do_task inspect_apt_src
     do_task ensure_vim
     do_task install_ssh
-    restart_sshd
     do_task backup
     do_task ensure_python3
 }
@@ -191,7 +190,8 @@ config_sudoer() {
     ready "Press [ENTER] to launch visudo"
     visudo
     if [ -d /etc/sudoers.d ]; then
-        ready "View all overrides"
+        tail -n +1 /etc/sudoers.d/*
+        ready "Take action in bash"
         cd /etc/sudoers.d
         bash
         cd "$BASE"
@@ -404,7 +404,7 @@ inspect_ports() {
     echo ----
     lsof -i -n -P
     echo ----
-    ready "Inspect"
+    ready "Take action in bash"
     # TODO: make sure netstat is not compromised, otherwise install nmap
     bash
 }
@@ -619,14 +619,14 @@ inspect_www() {
 inspect_file_attrs() {
     ready "Search for files with non-base ACL in /home, /etc, and /var"
     getfacl -Rs /home /etc /var
-    ready "Inspect"
+    ready "Take action in bash"
     bash
     ready "Search for files with special attributes"
     lsattr -R /etc | grep -v -e '--------------e-----'
     lsattr -R /home | grep -v -e '--------------e-----'
     lsattr -R /root | grep -v -e '--------------e-----'
     lsattr -R /var | grep -v -e '--------------e-----'
-    ready "Inspect"
+    ready "Take action in bash"
     bash
 }
 
@@ -640,7 +640,7 @@ inspect_unit_files() {
 view_ps() {
     ready "View process hierarchy"
     ps axjf
-    ready "Inspect"
+    ready "Take action in bash"
     bash
 }
 
