@@ -17,13 +17,13 @@ export BACKUP=/backup
 
 todo () {
     # Follow the instruction; might have to leave terminal
-    echo -e "\033[0;31mTODO:\033[0m $*"
+    echo -e "\033[0;31;1;4mTODO:\033[0m $*"
     read -n 1 -rp "Press [ENTER] when you finish"
 }
 
 ready() {
     # Wait for user to be ready
-    echo -e "\033[0;35mREADY:\033[0m $*"
+    echo -e "\033[0;35;1;4mREADY:\033[0m $*"
     read -n 1 -rp "Press [ENTER] when you are ready"
 }
 
@@ -34,12 +34,14 @@ do_task() {
     if [ -f "$DATA/$1" ]; then
         return
     fi
+    echo -e "\033[0;32mTask: $*\033[0m" | tr _ ' '
     eval "$@"
     echo
     echo "Tip: Don't forget to record scoring reports and take notes!"
-    read -p "Mark this task as finished? [y/N] " -n 1 -r
+    read -p "Done with the task? [Y/n] " -n 1 -r
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
         touch "$DATA/$1"
     fi
+    echo -e "\033[0;32m====================\033[0m\n"
 }
