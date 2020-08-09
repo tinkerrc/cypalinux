@@ -1,19 +1,116 @@
 #!/usr/bin/env bash
-# Zhenkai Weng - Walnut HS CSC
+
+# ===================================
+# CyPa Hardening Script (Team 1)
+# Walnut HS Cyber Security Club
+# ===================================
+
+harden() {
+    if [ ! "$(whoami)" = "root" ]; then
+        echo Please try again with root priviliges...
+        exit 1
+    fi
+
+    echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
+    echo " - Data directory: $DATA"
+    echo " - Base directory: $BASE"
+    mkdir -p "$DATA"
+    if ! [ -d "$BASE/rc" ]; then
+        echo "The resources directory is missing"
+        exit 1
+    fi
+
+    todo "Don't forget to use 'script' to record the output"
+    todo "Launch a root shell in another terminal in case something goes wrong"
+
+    do_task inspect_apt_src
+    echo Updating package lists...
+    apt update
+    clear
+
+    # Preliminaries
+    do_task ensure_vim
+    do_task ensure_ssh_is_installed
+    ensure_ssh_is_running
+    do_task backup
+    do_task ensure_python3
+
+    # Get started
+    do_task readme
+    do_task do_fq
+
+    # User auditing
+    do_task lock_root
+    do_task chsh_root
+    do_task remove_unauth_users
+    do_task inspect_passwd
+    do_task inspect_group
+    do_task inspect_sudoer
+    do_task config_dm
+
+    # Service config
+    do_task config_apache
+    ensure_ssh_is_running
+    do_task inspect_ssh_config
+    ensure_ssh_is_running
+    do_task config_php
+    do_task inspect_www
+    do_task view_ps
+
+    # Disallowed files
+    do_task rm_media_files
+    do_task find_pw_text_files
+
+    # Software auditing
+    do_task config_unattended_upgrades
+    do_task audit_pkgs
+
+    # Miscellaneous
+    do_task inspect_resolv
+    do_task restrict_cron
+    do_task inspect_hosts
+    do_task fix_file_perms
+    do_task firewall
+    do_task config_sysctl
+    do_task config_common
+    do_task secure_fs
+    do_task config_fail2ban
+    do_task inspect_startup
+    do_task inspect_acl
+
+    # Abnormality
+    do_task inspect_svc
+    do_task inspect_ports
+    do_task inspect_cron
+    do_task inspect_netcat
+
+    # Scan
+    do_task run_lynis
+    do_task run_linenum
+    do_task run_linpeas
+
+    # Last-minute suggestions
+    ensure_ssh_is_running
+    do_task suggestions
+    do_task av_scan
+    echo Done!
+
+    # keep a root shell in case something goes wrong
+    echo Here is a root shell for your convenience
+    bash
+}
+
+# ====================
+# Set up environment
+# ====================
 
 set -euo pipefail
 unalias -a
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
-if [ ! "$(whoami)" = "root" ]; then
-    echo Please try again with root priviliges...
-    exit 1
-fi
-
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DATA="$HOME/.harden"
 BACKUP=/backup
-mkdir -p "$DATA"
 
 todo () {
     # Follow the instruction; might have to leave terminal
@@ -45,7 +142,9 @@ do_task() {
     clear
 }
 
-# tasks
+# ====================
+# Tasks
+# ====================
 
 do_fq() {
     todo "Do forensic questions"
@@ -626,96 +725,4 @@ view_ps() {
     bash
 }
 
-harden() {
-    # TODO: prepend vim-editing with chmod if necessary
-
-    echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
-    echo " - Data directory: $DATA"
-    echo " - Base directory: $BASE"
-    if ! [ -d "$BASE/rc" ]; then
-        echo "The resources directory is missing"
-        exit 1
-    fi
-
-    todo "Don't forget to use 'script' to record the output"
-    todo "Launch a root shell in another terminal in case something goes wrong"
-
-    do_task inspect_apt_src
-    echo Updating package lists...
-    apt update
-    clear
-
-    # Preliminaries
-    do_task ensure_vim
-    do_task ensure_ssh_is_installed
-    ensure_ssh_is_running
-    do_task backup
-    do_task ensure_python3
-
-    # Get started
-    do_task readme
-    do_task do_fq
-
-    # User auditing
-    do_task lock_root
-    do_task chsh_root
-    do_task remove_unauth_users
-    do_task inspect_passwd
-    do_task inspect_group
-    do_task inspect_sudoer
-    do_task config_dm
-
-    # Service config
-    do_task config_apache
-    ensure_ssh_is_running
-    do_task inspect_ssh_config
-    ensure_ssh_is_running
-    do_task config_php
-    do_task inspect_www
-    do_task view_ps
-
-    # Disallowed files
-    do_task rm_media_files
-    do_task find_pw_text_files
-
-    # Software auditing
-    do_task config_unattended_upgrades
-    do_task audit_pkgs
-
-    # Miscellaneous
-    do_task inspect_resolv
-    do_task restrict_cron
-    do_task inspect_hosts
-    do_task fix_file_perms
-    do_task firewall
-    do_task config_sysctl
-    do_task config_common
-    do_task secure_fs
-    do_task config_fail2ban
-    do_task inspect_startup
-    do_task inspect_acl
-
-    # Abnormality
-    do_task inspect_svc
-    do_task inspect_ports
-    do_task inspect_cron
-    do_task inspect_netcat
-
-    # Scan
-    do_task run_lynis
-    do_task run_linenum
-    do_task run_linpeas
-
-    # Last-minute suggestions
-    ensure_ssh_is_running
-    do_task suggestions
-    do_task av_scan
-    echo Done!
-}
-
-
 harden
-
-# keep a root shell in case something goes wrong
-echo A root shell for your convenience
-bash
