@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 source "$(dirname $0)/common.sh"
 
+if [[ $_ != $0 ]]; then
+    echo "Invoke harden to secure the machine"
+else
+    echo "Run 'source harden.sh'"
+fi
+
 # ===================================
 # CyPa Hardening Script (Team 1)
 # Walnut HS Cyber Security Club
@@ -643,9 +649,3 @@ view_ps() {
     ready "Take action in bash"
     bash
 }
-
-if [[ $_ != $0 ]]; then
-    echo "Run source harden.sh instead"
-else
-    echo "Run harden to start the script"
-fi
