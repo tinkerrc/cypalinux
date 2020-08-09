@@ -12,30 +12,29 @@ BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DATA="$HOME/.harden"
 BACKUP=/backup
 mkdir -p "$DATA"
-mkdir -p "$BACKUP"
 
 todo () {
     # Follow the instruction; might have to leave terminal
     echo -e "\033[0;31mTODO:\033[0m $*"
-    read -rp "Press [ENTER] when you finish"
+    read -n 1 -rp "Press [ENTER] when you finish"
 }
 
 ready() {
     # Wait for user to be ready
     echo -e "\033[0;35mREADY:\033[0m $*"
-    read -rp "Press [ENTER] when you are ready"
+    read -n 1 -rp "Press [ENTER] when you are ready"
 }
 
-# in case the script is stopped midway
-# we don't have to go through everything again
-# unless it is marked incomplete
-run_once() {
+do_task() {
+    # in case the script is stopped midway
+    # we don't have to go through everything again
+    # unless it is not marked complete
     if [ -f "$DATA/$1" ]; then
         return
     fi
     eval "$@"
     echo
-    echo "Tip: Don't forget to record scoring reports and take snapshots!"
+    echo "Tip: Don't forget to record scoring reports and take notes!"
     read -p "Mark this task as finished? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -56,7 +55,7 @@ readme() {
 
 ensure_python3() {
     echo Checking python3 installation...
-    if ! python3 --version; then
+    if ! (python3 --version >/dev/null); then
         ready "Try installing python3"
         bash
     else
@@ -66,10 +65,15 @@ ensure_python3() {
 
 backup() {
     echo Backing up files...
-    cp -a /home $BACKUP
-    cp -a /etc $BACKUP
-    cp -a /var $BACKUP
-    echo NOTE: /etc /var and /home are backed up into $BACKUP
+    mkdir "$BACKUP"
+    cp -a /home "$BACKUP"
+    cp -a /etc "$BACKUP"
+    cp -a /var "$BACKUP"
+    if [ -d "$BACKUP" ]; then
+        echo NOTE: /etc /var and /home are backed up into $BACKUP
+    else
+        echo "Backup failed; $BACKUP not found"
+    fi
 }
 
 lock_root() {
@@ -122,21 +126,30 @@ inspect_group() {
 inspect_sudoer() {
     ready "Press [ENTER] to launch visudo"
     visudo
+    if [ -d /etc/sudoers.d ]; then
+        ready "View all overrides"
+        cd /etc/sudoers.d
+        bash
+        cd "$BASE"
+    fi
     echo Sudoers audit complete
 }
 
+restart_sshd() {
+    systemctl restart sshd || service ssh restart || echo "Failed to restart sshd"
+}
 inspect_ssh_config() {
     ready "Diff sshd config"
     vim -d /etc/ssh/sshd_config "$BASE/rc/sshd_config"
     echo Validating...
     echo Restarting service
-    service ssh restart
+    restart_sshd
     echo sshd config complete
 }
 
 ensure_ssh_is_running() {
-    service ssh restart
-    if ! pgrep ssh > /dev/null; then
+    restart_sshd
+    if ! pgrep sshd > /dev/null; then
         ready "Ensure sshd is running"
         bash
     fi
@@ -146,38 +159,30 @@ ensure_ssh_is_installed() {
     if ! [ -x /usr/bin/sshd ]; then
         echo Installing openssh-server
         apt install -y openssh-server > /dev/null
-        service ssh restart
+        restart_sshd
         echo Installation complete
     fi
 }
 
 rm_media_files() {
-    if [ -d "$BACKUP/home" ]; then
-        # /home is backed up, so directly deleting it is safe
-        find /home -type f \( \
-            -name "*.aac" -o \
-            -name "*.avi" -o \
-            -name "*.flac" -o \
-            -name "*.flv" -o \
-            -name "*.gif" -o \
-            -name "*.jpeg" -o \
-            -name "*.jpg" -o \
-            -name "*.m4a" -o \
-            -name "*.mkv" -o \
-            -name "*.mov" -o \
-            -name "*.mp3" -o \
-            -name "*.mp4" -o \
-            -name "*.mpeg" -o \
-            -name "*.mpg" -o \
-            -name "*.ogg" -o \
-            -name "*.png" -o \
-            -name "*.rmvb" -o \
-            -name "*.wma" -o \
-            -name "*.wmv" \
-            \) -delete -print > "$DATA/banned_files"
-    else
-        echo "$BACKUP/home not found. Skipped media files scanning."
+    if ! which &>/dev/null; then
+        apt install -y mlocate findutils
     fi
+    ready "Inspect locate config; look for excluded paths and extensions"
+    vim /etc/updatedb.conf
+    echo "Updating database"
+    updatedb
+
+    if ! [ -d "$BACKUP/home" ]; then
+        echo "Warning: backup for home not found"
+        ready -n 1 -rp "Press [ENTER] to continue"
+    fi
+    locate -0 -i --regex \
+        "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
+        xargs -0 -t rm | tee "$DATA/banned_files" || echo "Couldn't remove files"
+    echo "The above files are deleted. The file names are stored in $DATA/banned_files"
+    ready "You might want to look for additional media files"
+    bash
 }
 
 find_pw_text_files() {
@@ -228,11 +233,20 @@ firewall() {
     ufw allow ssh
     ufw default deny incoming
     ufw default allow outgoing
-    ufw reject telnet
+    ufw deny telnet
+	ufw deny 2049
+	ufw deny 515
+	ufw deny 111
+    ufw logging high
     echo Allows outgoing traffic by default
     echo Denies incoming traffic by default
     echo "Allow   :  SSH"
     echo "Reject  :  Telnet"
+    ufw status verbose
+    if [ -f /etc/ufw/sysctl.conf ]; then
+        ready "Inspect UFW override config"
+        vim /etc/ufw/sysctl.conf
+    fi
     ready "Further modify UFW settings according to README (e.g., ufw allow 80)"
     bash
 }
@@ -243,7 +257,7 @@ inspect_svc() {
     echo " [-] : stopped"
     echo " [?] : upstart service / status unsupported"
     ready "Press [ENTER] to get list of services"
-    service --status-all | sort
+    systemctl || service --status-all | sort || echo "Failed to list services"
     ready "Inspect"
     bash
 }
@@ -251,6 +265,10 @@ inspect_svc() {
 config_sysctl() {
     cat "$BASE/rc/sysctl.conf" > /etc/sysctl.conf
     sysctl -e -p /etc/sysctl.conf
+    if [ -d /etc/sysctl.d ]; then
+        ready "Inspect sysctl.d"
+        vim /etc/sysctl.d
+    fi
     echo /etc/sysctl.conf has been installed
 }
 
@@ -258,13 +276,15 @@ config_common() {
     apt install -y libpam-cracklib
     cat "$BASE/rc/common-password" > /etc/pam.d/common-password
     cat "$BASE/rc/common-auth" > /etc/pam.d/common-auth
+    cat "$BASE/rc/common-account" > /etc/pam.d/common-account
+    cat "$BASE/rc/common-session" > /etc/pam.d/common-session
     cat "$BASE/rc/login.defs" > /etc/login.defs
     cat "$BASE/rc/host.conf" > /etc/host.conf
     echo PAM config, login.defs, and host.conf have been installed
 }
 
 audit_pkgs() {
-    read -rp "Should apache2 be removed? [y/N] "
+    read -rp "Remove apache2? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing apache2..."
         apt-get -my purge apache2 &> /dev/null
@@ -272,7 +292,7 @@ audit_pkgs() {
         echo "Will not remove apache2."
     fi
 
-    read -rp "Should samba be removed? [y/N] "
+    read -rp "Remove samba? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing samba..."
         apt-get -my purge samba* &> /dev/null
@@ -280,7 +300,7 @@ audit_pkgs() {
         echo "Will not remove samba."
     fi
 
-    read -rp "Should vsftpd and openssh-sftp-server be removed? [y/N] "
+    read -rp "Remove vsftpd and openssh-sftp-server? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing vsftpd..."
         apt-get -my purge vsftpd openssh-sftp-server &> /dev/null
@@ -288,10 +308,10 @@ audit_pkgs() {
         echo "Will not remove vsftpd/openssh-sftp-server."
     fi
 
-    ready "Press [ENTER] to remove: hydra nmap zenmap john ftp telnet bind9 medusa vino ncat netcat* ophcrack"
+    ready "Press [ENTER] to remove: hydra nmap zenmap john ftp telnet bind9 medusa vino ncat netcat* ophcrack fcrackzip hashcat"
     echo "Removing in 5s"
     sleep 5
-    apt -my purge hydra nmap zenmap john ftp telnet bind9 medusa vino ncat netcat* ophcrack > /dev/null
+    apt -my purge hydra nmap zenmap john ftp telnet bind9 medusa vino netcat* ophcrack minetest aircrack-ng hashcat fcrackzip > /dev/null
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
     echo "Installing additional packages..."
@@ -307,11 +327,12 @@ audit_pkgs() {
 inspect_ports() {
     ready "Inspect ports"
     echo ----
-    netstat -plunt
+    netstat -plunte
     echo ----
     lsof -i -n -P
     echo ----
     ready "Inspect"
+    # TODO: make sure netstat is not compromised, otherwise install nmap
     bash
 }
 
@@ -319,15 +340,23 @@ inspect_cron() {
     ready "Check root cron"
     crontab -e
     ready "Check user cron"
-    if [[ -d /var/spool/cron/crontabs/ ]]; then
+    if [ -d /var/spool/cron/crontabs/ ]; then
         cd /var/spool/cron/crontabs/
         bash
-    elif [[ -d /var/spool/cron/ ]]; then
+    elif [ -d /var/spool/cron/ ]; then
         cd /var/spool/cron/
         bash
     else
         echo No known crontabs directory found.
         bash
+    fi
+    if [ -f /etc/anacrontab ]; then
+        ready "Inspect anacrontab"
+        vim /etc/anacrontab
+    fi
+    if [ -d /var/spool/anacrontab ]; then
+        ready "Inspect anacrontabs"
+        vim /var/spool/anacrontab
     fi
     ready "Check periodic crons (e.g., /etc/cron.hourly)"
     cd /etc
@@ -344,23 +373,30 @@ fix_file_perms() {
     chown root:root /etc/shadow
     chmod 600 /etc/gshadow
     chown root:root /etc/gshadow
-    chmod 700 /boot
-
-    chown root:root /etc/anacrontab
     chmod 640 /etc/anacrontab
-    chown root:root /etc/crontab
+    chown root:root /etc/anacrontab
     chmod 640 /etc/crontab
-    chown root:root /etc/cron.hourly
+    chown root:root /etc/crontab
     chmod 640 /etc/cron.hourly
-    chown root:root /etc/cron.daily
+    chown root:root /etc/cron.hourly
     chmod 640 /etc/cron.daily
-    chown root:root /etc/cron.weekly
+    chown root:root /etc/cron.daily
     chmod 640 /etc/cron.weekly
-    chown root:root /etc/cron.monthly
+    chown root:root /etc/cron.weekly
     chmod 640 /etc/cron.monthly
-    chown root:root /etc/cron.d
+    chown root:root /etc/cron.monthly
     chmod 640 /etc/cron.d
+    chown root:root /etc/cron.d
+    chmod 700 /boot
     echo Common system file permissions corrected
+
+    chmod 755 /home
+    chmod 700 /home/*
+    find /home -maxdepth 2 -mindepth 2 -name ".ssh" -type d -exec chmod 700 {} \; -print
+    # assuming there's no funny business going on in .ssh/, should only have files
+    # not directories
+    find /home -maxdepth 3 -mindepth 2 -path "*.ssh*" -type f -exec chmod 600 {} \; -print
+    echo "Secured home and .ssh/* permissions"
 
     ready "Inspect /home and /home/* owners and permissions"
     bash
@@ -369,7 +405,7 @@ fix_file_perms() {
 
 run_lynis() {
     cd "$DATA"
-    if ! [[ -d $DATA/lynis ]]; then
+    if ! [[ -d "$DATA/lynis" ]]; then
         git clone --depth 1 https://github.com/CISOfy/lynis
     fi
     cd lynis
@@ -419,8 +455,10 @@ suggestions() {
 }
 
 inspect_hosts() {
-    ready "Inspect /etc/hosts"
+    ready "Inspect /etc/hosts, /etc/hosts.allow, /etc/hosts.deny"
     vim /etc/hosts
+    vim /etc/hosts.allow
+    vim /etc/hosts.deny
 }
 
 inspect_netcat() {
@@ -438,7 +476,7 @@ inspect_netcat() {
 
 secure_fs() {
     echo "tmpfs      /dev/shm    tmpfs   defaults,noexec,nodev,nosuid   0 0" >> /etc/fstab
-    (umount /dev/shm && mount /dev/shm) || echo Failed to remount /dev/shm with new settings
+    umount /dev/shm && mount /dev/shm || echo Failed to remount /dev/shm with new settings
     ready "Inspect /etc/fstab"
     vim /etc/fstab
 }
@@ -447,7 +485,7 @@ config_fail2ban() {
     apt install -y fail2ban
     touch /etc/fail2ban/jail.local
     cat "$BASE/rc/jail.local" > jail.local
-    service fail2ban restart
+    systemctl restart fail2ban || service fail2ban restart || echo "Failed to restart fail2ban"
 }
 
 config_php() {
@@ -501,7 +539,7 @@ config_apache() {
         vim /etc/apache2/apache2.conf
 
         echo Restarting apache2
-        service apache2 restart
+        systemctl restart apache2 || service apache2 restart || echo "Failed to restart Apache2"
     else
         echo "No apache2 config found"
     fi
@@ -510,6 +548,7 @@ config_apache() {
 
 inspect_resolv() {
     ready "Inspect /etc/resolv.conf; use 8.8.8.8 for nameserver"
+    # TODO: disable systemd dns
     vim /etc/resolv.conf
     echo Done
 }
@@ -529,7 +568,63 @@ av_scan() {
     clamscan -r -i --stdout --exclude-dir="^/sys" /
 }
 
+run_linpeas() {
+    cd "$DATA"
+    git clone --depth 1 https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/
+    ready "Run linpeas.sh"
+    ./privilege-escalation-awesome-scripts-suite/linPEAS/linpeas.sh
+    ready "Inspect"
+    bash
+    cd -
+}
+
+ensure_vim() {
+    if ! which vim &>/dev/null; then
+        apt install -y vim
+        echo "Installed vim"
+    else
+        echo "Vim is already installed"
+    fi
+    # TODO: Add a sane default config
+    # TODO: inspect config?
+}
+
+inspect_www() {
+    if [ -d /var/www/html ]; then
+       ready "Inspect /var/www/html"
+       cd /var/www/html
+       bash
+       cd -
+    else
+        echo "/var/www/html not found; no inspection necessary"
+    fi
+}
+
+inspect_acl() {
+    ready "Search for files with non-base ACL in /home, /etc, and /var"
+    getfacl -Rs /home /etc /var
+    ready "Inspect"
+    bash
+}
+
+inspect_unit_files() {
+    if which systemctl &>/dev/null; then
+        ready "View systemd unit files"
+        systemctl list-unit-files
+    fi
+}
+
 harden() {
+    # TODO: prepend vim-editing with chmod if necessary
+
+    # TODO: look for special ACLs (getfacl --skip-base; then reset by setfacl -b $FILE) and special attributes
+    # TODO: ps axjf # view process hierarchy
+    # TODO: check systemd unit files in /etc/systemd/{system,user} and ~/.config/systemd/*
+    # TODO: externalize (move into separate shell script) stuff like run_linpeas, av_scan etc
+    # TODO: disable login manager root & guest login for lightdm & gdm
+    # TODO: look for wordlists, check /opt
+    # TODO: add Eric's malware section to script
+
     echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
     echo " - Data directory: $DATA"
     echo " - Base directory: $BASE"
@@ -537,79 +632,82 @@ harden() {
         echo "The resources directory is missing"
         exit 1
     fi
-    if ! service --status-all >/dev/null; then
-        echo "service command not found. Is the system using systemd?"
-        exit 1
-    fi
 
+    todo "Don't forget to use 'script' to record the output"
     todo "Launch a root shell in another terminal in case something goes wrong"
-    run_once inspect_apt_src
+
+    do_task inspect_apt_src
     echo Updating package lists...
     apt update
     clear
 
     # Preliminaries
-    run_once ensure_ssh_is_installed
+    do_task ensure_vim
+    do_task ensure_ssh_is_installed
     ensure_ssh_is_running
-    run_once backup
-    run_once ensure_python3
+    do_task backup
+    do_task ensure_python3
 
     # Get started
-    run_once readme
-    run_once do_fq
+    do_task readme
+    do_task do_fq
 
     # User auditing
-    run_once lock_root
-    run_once chsh_root
-    run_once remove_unauth_users
-    run_once inspect_passwd
-    run_once inspect_group
-    run_once inspect_sudoer
+    do_task lock_root
+    do_task chsh_root
+    do_task remove_unauth_users
+    do_task inspect_passwd
+    do_task inspect_group
+    do_task inspect_sudoer
+    do_task lightdm_disable_guest
 
     # Service config
-    run_once config_apache
+    do_task config_apache
     ensure_ssh_is_running
-    run_once inspect_ssh_config
+    do_task inspect_ssh_config
     ensure_ssh_is_running
-    run_once config_php
+    do_task config_php
+    do_task inspect_www
 
     # Disallowed files
-    run_once rm_media_files
-    run_once find_pw_text_files
+    do_task rm_media_files
+    do_task find_pw_text_files
 
     # Software auditing
-    run_once config_unattended_upgrades
-    run_once audit_pkgs
+    do_task config_unattended_upgrades
+    do_task audit_pkgs
 
     # Miscellaneous
-    run_once inspect_resolv
-    run_once restrict_cron
-    run_once inspect_hosts
-    run_once lightdm_disable_guest
-    run_once fix_file_perms
-    run_once firewall
-    run_once config_sysctl
-    run_once config_common
-    run_once secure_fs
-    run_once config_fail2ban
-    run_once inspect_startup
+    do_task inspect_resolv
+    do_task restrict_cron
+    do_task inspect_hosts
+    do_task fix_file_perms
+    do_task firewall
+    do_task config_sysctl
+    do_task config_common
+    do_task secure_fs
+    do_task config_fail2ban
+    do_task inspect_startup
+    do_task inspect_acl
 
     # Abnormality
-    run_once inspect_svc
-    run_once inspect_ports
-    run_once inspect_cron
-    run_once inspect_netcat
+    do_task inspect_svc
+    do_task inspect_ports
+    do_task inspect_cron
+    do_task inspect_netcat
 
     # Scan
-    run_once run_lynis
-    run_once run_linenum
+    do_task run_lynis
+    do_task run_linenum
+    do_task run_linpeas
 
     # Last-minute suggestions
     ensure_ssh_is_running
-    run_once suggestions
-    run_once av_scan || bash
+    do_task suggestions
+    do_task av_scan
     echo Done!
 }
+
 
 harden
 

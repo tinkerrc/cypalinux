@@ -1,4 +1,5 @@
-auth requisite  pam_deny.so
-auth required   pam_permit.so
-auth optional   pam_cap.so 
-auth optional   pam_tally.so deny=5 unlock_time=900 onerr=fail audit even_deny_root_account silent
+auth [success=1 default=ignore] pam_unix.so
+auth required                   pam_deny.so
+auth required                   pam_tally2.so deny=5 unlock_time=900 onerr=fail audit even_deny_root_account silent
+auth required                   pam_permit.so
+auth optional                   pam_cap.so

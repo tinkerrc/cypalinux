@@ -13,7 +13,6 @@ LogLevel VERBOSE
 LoginGraceTime 120
 PermitRootLogin no
 StrictModes yes
-RSAAuthentication yes
 PubkeyAuthentication yes
 IgnoreRhosts yes
 RhostsRSAAuthentication no
