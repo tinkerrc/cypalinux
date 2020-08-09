@@ -644,4 +644,8 @@ view_ps() {
     bash
 }
 
-harden
+if [[ $_ != $0 ]]; then
+    echo "Run source harden.sh instead"
+else
+    echo "Run harden to start the script"
+fi

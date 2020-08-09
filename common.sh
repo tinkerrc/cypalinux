@@ -42,5 +42,4 @@ do_task() {
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         touch "$DATA/$1"
     fi
-    clear
 }
