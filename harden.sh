@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+source "$(dirname $0)/common.sh"
 
 # ===================================
 # CyPa Hardening Script (Team 1)
@@ -6,93 +7,21 @@
 # ===================================
 
 harden() {
-    if [ ! "$(whoami)" = "root" ]; then
-        echo Please try again with root priviliges...
-        exit 1
-    fi
-
     echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
-    echo " - Data directory: $DATA"
-    echo " - Base directory: $BASE"
-    mkdir -p "$DATA"
-    if ! [ -d "$BASE/rc" ]; then
-        echo "The resources directory is missing"
-        exit 1
-    fi
+    echo " => Data directory: $DATA"
+    echo " => Base directory: $BASE"
 
-    todo "Don't forget to use 'script' to record the output"
-    todo "Launch a root shell in another terminal in case something goes wrong"
+    section_preliminaries
+    section_get_started
+    section_user_audit
+    section_svc_config
+    section_disallowed
+    section_common_config
+    section_rare_vulns
 
-    do_task inspect_apt_src
-    echo Updating package lists...
-    apt update
-    clear
-
-    # Preliminaries
-    do_task ensure_vim
-    do_task ensure_ssh_is_installed
-    ensure_ssh_is_running
-    do_task backup
-    do_task ensure_python3
-
-    # Get started
-    do_task readme
-    do_task do_fq
-
-    # User auditing
-    do_task lock_root
-    do_task chsh_root
-    do_task remove_unauth_users
-    do_task inspect_passwd
-    do_task inspect_group
-    do_task inspect_sudoer
-    do_task config_dm
-
-    # Service config
-    do_task config_apache
-    ensure_ssh_is_running
-    do_task inspect_ssh_config
-    ensure_ssh_is_running
-    do_task config_php
-    do_task inspect_www
-    do_task view_ps
-
-    # Disallowed files
-    do_task rm_media_files
-    do_task find_pw_text_files
-
-    # Software auditing
-    do_task config_unattended_upgrades
-    do_task audit_pkgs
-
-    # Miscellaneous
-    do_task inspect_resolv
-    do_task restrict_cron
-    do_task inspect_hosts
-    do_task fix_file_perms
-    do_task firewall
-    do_task config_sysctl
-    do_task config_common
-    do_task secure_fs
-    do_task config_fail2ban
-    do_task inspect_startup
-    do_task inspect_acl
-
-    # Abnormality
-    do_task inspect_svc
-    do_task inspect_ports
-    do_task inspect_cron
-    do_task inspect_netcat
-
-    # Scan
-    do_task run_lynis
-    do_task run_linenum
-    do_task run_linpeas
-
-    # Last-minute suggestions
-    ensure_ssh_is_running
+    restart_sshd
+    todo "Run scan.sh in a new terminal window"
     do_task suggestions
-    do_task av_scan
     echo Done!
 
     # keep a root shell in case something goes wrong
@@ -100,46 +29,80 @@ harden() {
     bash
 }
 
-# ====================
-# Set up environment
-# ====================
+section_preliminaries() {
+    mkdir -p "$DATA"
+    setxkbmap -option caps:swapescape
 
-set -euo pipefail
-unalias -a
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    if ! [ -d "$BASE/rc" ]; then
+        echo "The resources directory is missing"
+        exit 1
+    fi
 
-BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DATA="$HOME/.harden"
-BACKUP=/backup
+    if [ ! "$(whoami)" = "root" ]; then
+        echo Please try again with root priviliges...
+        exit 1
+    fi
 
-todo () {
-    # Follow the instruction; might have to leave terminal
-    echo -e "\033[0;31mTODO:\033[0m $*"
-    read -n 1 -rp "Press [ENTER] when you finish"
+    todo "Don't forget to use 'script' to record the output"
+    todo "Launch a root shell in another terminal in case something goes wrong"
+
+    do_task inspect_apt_src
+    do_task ensure_vim
+    do_task install_ssh
+    restart_sshd
+    do_task backup
+    do_task ensure_python3
 }
 
-ready() {
-    # Wait for user to be ready
-    echo -e "\033[0;35mREADY:\033[0m $*"
-    read -n 1 -rp "Press [ENTER] when you are ready"
+section_get_started() {
+    do_task readme
+    do_task do_fq
 }
 
-do_task() {
-    # in case the script is stopped midway
-    # we don't have to go through everything again
-    # unless it is not marked complete
-    if [ -f "$DATA/$1" ]; then
-        return
-    fi
-    eval "$@"
-    echo
-    echo "Tip: Don't forget to record scoring reports and take notes!"
-    read -p "Mark this task as finished? [y/N] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        touch "$DATA/$1"
-    fi
-    clear
+section_user_audit() {
+    do_task lock_root
+    do_task chsh_root
+    do_task remove_unauth_users
+    do_task inspect_passwd
+    do_task inspect_group
+    do_task config_sudoer
+    do_task config_dm
+}
+
+section_svc_config() {
+    do_task inspect_svc
+    do_task inspect_cron
+    do_task config_sshd
+    do_task config_apache
+    do_task config_php
+    do_task inspect_www
+    do_task view_ps
+}
+
+section_disallowed() {
+    do_task rm_media_files
+    do_task find_pw_text_files
+    do_task inspect_ports
+    do_task inspect_netcat
+}
+
+section_common_config() {
+    do_task config_unattended_upgrades
+    do_task audit_pkgs
+    do_task inspect_hosts
+    do_task config_sysctl
+    do_task fix_file_perms
+    do_task firewall
+    do_task restrict_cron
+    do_task config_common
+    do_task inspect_startup
+}
+
+section_rare_vulns() {
+    do_task secure_fs
+    do_task inspect_resolv
+    do_task config_fail2ban
+    do_task inspect_file_attrs
 }
 
 # ====================
@@ -224,7 +187,7 @@ inspect_group() {
     echo /etc/group inspection complete
 }
 
-inspect_sudoer() {
+config_sudoer() {
     ready "Press [ENTER] to launch visudo"
     visudo
     if [ -d /etc/sudoers.d ]; then
@@ -237,26 +200,24 @@ inspect_sudoer() {
 }
 
 restart_sshd() {
-    systemctl restart sshd || service ssh restart || echo "Failed to restart sshd"
+    echo Restarting sshd
+    if ! (systemctl restart sshd || service ssh restart); then
+        echo "Failed to restart sshd"
+        ready "Ensure sshd is running"
+        bash
+    else
+        echo "Successfully restarted sshd"
+    fi
 }
-inspect_ssh_config() {
+
+config_sshd() {
     ready "Diff sshd config"
     vim -d /etc/ssh/sshd_config "$BASE/rc/sshd_config"
-    echo Validating...
-    echo Restarting service
     restart_sshd
     echo sshd config complete
 }
 
-ensure_ssh_is_running() {
-    restart_sshd
-    if ! pgrep sshd > /dev/null; then
-        ready "Ensure sshd is running"
-        bash
-    fi
-}
-
-ensure_ssh_is_installed() {
+install_ssh() {
     if ! [ -x /usr/bin/sshd ]; then
         echo Installing openssh-server
         apt install -y openssh-server > /dev/null
@@ -363,9 +324,11 @@ firewall() {
 
 inspect_svc() {
     echo "Inspect services"
-    echo " [+] : running"
-    echo " [-] : stopped"
-    echo " [?] : upstart service / status unsupported"
+    if ! which service &>/dev/null; then
+        echo " [+] : running"
+        echo " [-] : stopped"
+        echo " [?] : upstart service / status unsupported"
+    fi
     ready "Press [ENTER] to get list of services"
     systemctl || service --status-all | sort || echo "Failed to list services"
     ready "Inspect services and systemd units in /etc/systemd and /home/**/.config/systemd"
@@ -515,32 +478,6 @@ fix_file_perms() {
     echo "Inspection complete"
 }
 
-run_lynis() {
-    cd "$DATA"
-    if ! [[ -d "$DATA/lynis" ]]; then
-        git clone --depth 1 https://github.com/CISOfy/lynis
-    fi
-    cd lynis
-    clear
-    ready 'Start lynis'
-    ./lynis audit system
-    ready "Inspect; run lynis scans under other modes if necessary"
-    bash
-}
-
-run_linenum() {
-    cd "$DATA"
-    if ! [[ -d $DATA/LinEnum ]]; then
-       git clone https://github.com/rebootuser/LinEnum
-    fi
-    cd LinEnum
-    chmod u+x ./LinEnum.sh
-    ./LinEnum.sh -t -e "$DATA" -r enum
-    cat enum
-    ready "Inspect"
-    bash
-}
-
 suggestions() {
     todo "note: chage -d 0 to force reset password on next login"
     todo "consider adding a warning banner in /etc/issue.net (then add 'Banner issue.net' to sshd_config)"
@@ -657,31 +594,6 @@ inspect_resolv() {
     echo Done
 }
 
-av_scan() {
-    echo --AV Scans--
-    ready "Start chkrootkit scan"
-    chkrootkit
-
-    ready "Start rkhunter scan"
-    rkhunter --update
-    rkhunter --propupd
-    rkhunter -c --enable all --disable none
-
-    ready "Start ClamAV scan"
-    freshclam --stdout
-    clamscan -r -i --stdout --exclude-dir="^/sys" /
-}
-
-run_linpeas() {
-    cd "$DATA"
-    git clone --depth 1 https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/
-    ready "Run linpeas.sh"
-    ./privilege-escalation-awesome-scripts-suite/linPEAS/linpeas.sh
-    ready "Inspect"
-    bash
-    cd -
-}
-
 ensure_vim() {
     if ! which vim &>/dev/null; then
         apt install -y vim
@@ -704,9 +616,16 @@ inspect_www() {
     fi
 }
 
-inspect_acl() {
+inspect_file_attrs() {
     ready "Search for files with non-base ACL in /home, /etc, and /var"
     getfacl -Rs /home /etc /var
+    ready "Inspect"
+    bash
+    ready "Search for files with special attributes"
+    lsattr -R /etc | grep -v -e '--------------e-----'
+    lsattr -R /home | grep -v -e '--------------e-----'
+    lsattr -R /root | grep -v -e '--------------e-----'
+    lsattr -R /var | grep -v -e '--------------e-----'
     ready "Inspect"
     bash
 }
