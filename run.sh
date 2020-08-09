@@ -617,6 +617,9 @@ inspect_unit_files() {
 harden() {
     # TODO: prepend vim-editing with chmod if necessary
 
+    # TODO: improve apache2 default config & setup; install security-related modules
+    # TODO: add secure config for all 3 common FTP servers; always use vimdiff and don't cp
+    # TODO: secure LAMP stack
     # TODO: look for special ACLs (getfacl --skip-base; then reset by setfacl -b $FILE) and special attributes
     # TODO: ps axjf # view process hierarchy
     # TODO: check systemd unit files in /etc/systemd/{system,user} and ~/.config/systemd/*
