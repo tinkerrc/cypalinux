@@ -2,6 +2,8 @@
 # Zhenkai Weng - Walnut HS CSC
 
 set -euo pipefail
+unalias -a
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 
 if [ ! "$(whoami)" = "root" ]; then
     echo Please try again with root priviliges...
@@ -181,7 +183,7 @@ rm_media_files() {
         "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
         xargs -0 -t rm | tee "$DATA/banned_files" || echo "Couldn't remove files"
     echo "The above files are deleted. The file names are stored in $DATA/banned_files"
-    ready "You might want to look for additional media files"
+    ready "You might want to look for additional media files and other disallowed files. Check /opt for example"
     bash
 }
 
@@ -190,7 +192,7 @@ find_pw_text_files() {
     bash
 }
 
-lightdm_disable_guest() {
+config_dm() {
     echo "" > "$DATA/lightdmconf" # clear file
     while read -r line
     do
@@ -199,10 +201,19 @@ lightdm_disable_guest() {
             echo "$line" >> "$DATA/lightdmconf"
         fi
     done < /etc/lightdm/lightdm.conf
-    echo "allow-guest=false" >> "$DATA/lightdmconf"
-
+    {
+        echo "allow-guest=false"
+        echo "greeter-hide-users=true"
+        echo "greeter-show-manual-login=true"
+    } >> "$DATA/lightdmconf"
     cat "$DATA/lightdmconf" > /etc/lightdm/lightdm.conf
     cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+
+    echo "Ubuntu 14: /etc/lightdm/"
+    echo "Ubuntu 16: /usr/share/lightdm/lightdm.conf.d/"
+    echo "Debian (GDM): /etc/gdm/gdm.conf"
+    ready "Inspect DM config"
+    bash
 }
 
 config_unattended_upgrades() {
@@ -258,7 +269,7 @@ inspect_svc() {
     echo " [?] : upstart service / status unsupported"
     ready "Press [ENTER] to get list of services"
     systemctl || service --status-all | sort || echo "Failed to list services"
-    ready "Inspect"
+    ready "Inspect services and systemd units in /etc/systemd and /home/**/.config/systemd"
     bash
 }
 
@@ -388,6 +399,8 @@ fix_file_perms() {
     chmod 640 /etc/cron.d
     chown root:root /etc/cron.d
     chmod 700 /boot
+    chmod 1777 /tmp
+    chown root:root /tmp
     echo Common system file permissions corrected
 
     chmod 755 /home
@@ -435,16 +448,8 @@ suggestions() {
     todo "in gdm3 greeter defaults config, disable-user-list=true"
     todo "apache2 - add ModEvasive and ModSecurity modules"
     todo "check executables with find / -perm /4000 2>/dev/null"
-    todo "Install antimalware/rootkit programs; chkrootkit / rkhunter / clamav (freshclam)"
-    todo "ensure ufw allows critical servers"
-    todo "check sticky bit perm"
     todo "set apt settings see phone picture"
-    todo "add a grub password, check signature"
-    todo "secure fstab"
-    todo "use chage if necessary"
-    todo "PAM module backdoor?"
     todo "setup auditd?"
-    todo "malicious kernel modules?"
     todo "malicious aliases?"
     todo "check /etc/skel"
     todo "check /etc/adduser.conf"
@@ -614,20 +619,15 @@ inspect_unit_files() {
     fi
 }
 
+view_ps() {
+    ready "View process hierarchy"
+    ps axjf
+    ready "Inspect"
+    bash
+}
+
 harden() {
     # TODO: prepend vim-editing with chmod if necessary
-
-    # TODO: see https://github.com/Ryan-Galligher/CyberPatriot/blob/master/CyberPatriotScript
-    # TODO: improve apache2 default config & setup; install security-related modules
-    # TODO: add secure config for all 3 common FTP servers; always use vimdiff and don't cp
-    # TODO: secure LAMP stack
-    # TODO: look for special ACLs (getfacl --skip-base; then reset by setfacl -b $FILE) and special attributes
-    # TODO: ps axjf # view process hierarchy
-    # TODO: check systemd unit files in /etc/systemd/{system,user} and ~/.config/systemd/*
-    # TODO: externalize (move into separate shell script) stuff like run_linpeas, av_scan etc
-    # TODO: disable login manager root & guest login for lightdm & gdm
-    # TODO: look for wordlists, check /opt
-    # TODO: add Eric's malware section to script
 
     echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
     echo " - Data directory: $DATA"
@@ -663,7 +663,7 @@ harden() {
     do_task inspect_passwd
     do_task inspect_group
     do_task inspect_sudoer
-    do_task lightdm_disable_guest
+    do_task config_dm
 
     # Service config
     do_task config_apache
@@ -672,6 +672,7 @@ harden() {
     ensure_ssh_is_running
     do_task config_php
     do_task inspect_www
+    do_task view_ps
 
     # Disallowed files
     do_task rm_media_files
