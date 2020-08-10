@@ -3,6 +3,7 @@ if [[ $_ != "$0" ]]; then
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh' instead"
+    exit 1
 fi
 
 # shellcheck source=./common.sh
