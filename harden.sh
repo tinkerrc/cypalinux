@@ -88,7 +88,8 @@ section_svc_config() {
     do_task inspect_cron
     do_task config_sshd
     do_task config_apache
-    do_task config_php
+   	do_task config_ftp
+	 	do_task config_php
     do_task inspect_www
     do_task view_ps
 }
@@ -600,6 +601,78 @@ config_apache() {
         echo "No apache2 config found"
     fi
     echo Done
+}
+config_ftp() {
+	read -p "Is Pure-FTPD a critical service? y/n: " yorn
+	if [ $yorn == n ]; then
+		echo "Removing Pure-FTPD"
+		apt-get autoremove --purge pure-ftpd
+	else
+		echo "Installing Pure-FTPD"
+		apt-get install pure-ftpd
+		
+		cp -r /etc/pure-ftpd/conf /etc/pure-ftpd/conf1
+		# TODO: Figure out TLSCipherSuite vs TLS?
+		#confirm all of these
+		echo "2" > /etc/pure-ftpd/conf/TLS
+		echo "no" > /etc/pure-ftpd/conf/NoAnonymous
+		echo "no" > /etc/pure-ftpd/conf/AnonymousOnly
+		echo "no" > /etc/pure-ftpd/conf/UnixAuthentication
+		echo "yes" > /etc/pure-ftpd/conf/PAMAuthentication
+		# TODO: Figure out ChrootEveryone
+		
+		# TODO: finish below 
+		#mkdir /etc/ssl/private
+		#sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem
+		
+		#chmod 600 /etc/ssl/private/pure-ftpd.pem
+	
+		systemctl restart pure-ftpd
+	fi
+
+	read -p "Is VSFTPD a critical service? y/n: " yorn
+	if [ $yorn == n ]; then
+		echo "Removing VSFTPD"
+		apt-get autoremove --purge vsftpd
+	else
+		apt-get install vsftpd
+
+		cp /etc/vsftpd.conf /etc/vsftpd.conf1
+		#confirm all of these
+		sed -i "s/anonymous_enable=.*/anonymous_enable=NO/" /etc/vsftpd.conf
+		sed -i "s/#chroot_local_user=.*/chroot_local_user=YES/" /etc/vsftpd.conf
+		sed -i "s/local_enable=.*/local_enable=YES/" /etc/vsftpd.conf
+		sed -i "s/#write_enable=.*/write_enable=YES/" /etc/vsftpd.conf
+		sed -i "s/ssl_enable=.*/ssl_enable=YES/" /etc/vsftpd.conf
+
+		# TODO: finish below
+		#mkdir /etc/ssl/private
+		#openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/vsftpd.key -out /etc/ssl/certs/vsftpd.crt
+	
+		#chmod 600 /etc/ssl/private/vsftpd.key
+		
+		systemctl restart vsftpd
+	fi
+
+	read -p "Is Pro-FTPD a critical service? y/n: " yorn
+	if [ $yorn == n ]; then
+		echo "Removing Pro-FTPD"
+		apt-get autoremove --purge proftpd
+	else
+		apt-get install proftpd
+
+		cp /etc/proftpd/proftpd.conf /etc/proftpd/protftpd.conf1
+		#confirm all of these
+		sed -i "s/# DefaultRoot\t\t\t~/DefaultRoot\t\t\ton/" /etc/proftpd/proftpd.conf
+		sed -i "s/# RequireValidShell\t\toff/RequireValidShell\t\t\ton/" /etc/proftpd/proftpd.conf
+		sed -i "s/# AuthOrder\t\t\t.*/AuthOrder\t\t\ton/" /etc/proftpd/proftpd.conf
+		# TODO: finish below
+		#mkdir /etc/ssl/private
+		#openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/vsftpd.key -out /etc/ssl/certs/vsftpd.crt
+		
+		#chmod 600 /etc/ssl/private/vsftpd.key
+		systemctl restart proftpd
+	fi
 }
 
 inspect_resolv() {
