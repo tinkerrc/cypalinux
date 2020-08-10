@@ -61,8 +61,8 @@ section_preliminaries() {
     todo "Don't forget to use 'script' to record the output"
     todo "Launch a root shell in another terminal in case something goes wrong"
 
-    do_task inspect_apt_src
     do_task ensure_vim
+    do_task inspect_apt_src
     do_task install_ssh
     do_task backup
     do_task ensure_python3
