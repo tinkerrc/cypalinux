@@ -2,7 +2,7 @@
 if [[ $_ != $0 ]]; then
     echo "Invoke harden to secure the machine"
 else
-    echo "Run 'source harden.sh'"
+    echo "Run 'source harden.sh' instead"
 fi
 
 source "$(dirname $0)/common.sh"
@@ -13,9 +13,15 @@ source "$(dirname $0)/common.sh"
 # ===================================
 
 harden() {
+    script -ac harden_impl "$DATA/log"
+}
+
+harden_impl() {
     echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
-    echo " => Data directory: $DATA"
-    echo " => Base directory: $BASE"
+    echo " => Current time   : $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    echo " => Data directory : $DATA"
+    echo " => Base directory : $BASE"
+    echo " => Output file    : $DATA/log"
 
     section_preliminaries
     section_get_started
@@ -34,6 +40,9 @@ harden() {
     echo Here is a root shell for your convenience
     bash
 }
+
+export -f harden
+export -f harden_impl
 
 section_preliminaries() {
     mkdir -p "$DATA"
