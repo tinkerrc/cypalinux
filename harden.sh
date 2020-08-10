@@ -144,9 +144,9 @@ ensure_python3() {
 backup() {
     echo Backing up files...
     mkdir "$BACKUP"
-    cp -a /home "$BACKUP"
-    cp -a /etc "$BACKUP"
-    cp -a /var "$BACKUP"
+    cp -a /home "$BACKUP" || true
+    cp -a /etc "$BACKUP" || true
+    cp -a /var "$BACKUP" || true
     if [ -d "$BACKUP" ]; then
         echo NOTE: /etc /var and /home are backed up into $BACKUP
     else
