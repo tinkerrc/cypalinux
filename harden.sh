@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-if [[ $_ != $0 ]]; then
+if [[ $_ != "$0" ]]; then
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh' instead"
 fi
 
-source "$(dirname $0)/common.sh"
+# shellcheck source=./common.sh
+source "$(dirname "$0")/common.sh"
 
 # ===================================
 # CyPa Hardening Script (Team 1)
@@ -149,7 +150,7 @@ backup() {
     cp -a /etc "$BACKUP" || true
     cp -a /var "$BACKUP" || true
     if [ -d "$BACKUP" ]; then
-        echo NOTE: /etc /var and /home are backed up into $BACKUP
+        echo "NOTE: /etc /var and /home are backed up into $BACKUP"
     else
         echo "Backup failed; $BACKUP not found"
     fi
@@ -208,9 +209,9 @@ config_sudoer() {
     if [ -d /etc/sudoers.d ]; then
         tail -n +1 /etc/sudoers.d/*
         ready "Take action in bash"
-        cd /etc/sudoers.d
+        cd /etc/sudoers.d || true
         bash
-        cd "$BASE"
+        cd "$BASE" || true
     fi
     echo Sudoers audit complete
 }
@@ -430,10 +431,10 @@ inspect_cron() {
     crontab -e
     ready "Check user cron"
     if [ -d /var/spool/cron/crontabs/ ]; then
-        cd /var/spool/cron/crontabs/
+        cd /var/spool/cron/crontabs/ || true
         bash
     elif [ -d /var/spool/cron/ ]; then
-        cd /var/spool/cron/
+        cd /var/spool/cron/ || true
         bash
     else
         echo No known crontabs directory found.
@@ -448,9 +449,9 @@ inspect_cron() {
         vim /var/spool/anacrontab
     fi
     ready "Check periodic crons (e.g., /etc/cron.hourly)"
-    cd /etc
+    cd /etc || true
     bash
-    cd "$BASE"
+    cd "$BASE" || true
 }
 
 fix_file_perms() {
@@ -697,9 +698,9 @@ ensure_vim() {
 inspect_www() {
     if [ -d /var/www/html ]; then
         ready "Inspect /var/www/html"
-        cd /var/www/html
+        cd /var/www/html || true
         bash
-        cd -
+        cd - || true
     else
         echo "/var/www/html not found; no inspection necessary"
     fi
