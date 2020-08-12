@@ -39,9 +39,9 @@ do_task() {
     eval "$@"
     echo
     echo "Tip: Don't forget to record scoring reports and take notes!"
-    read -p "Done with the task? [Y/n] " -n 1 -r
+    read -p "Done with the task? [y/N] " -n 1 -r
     echo
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         touch "$DATA/$1"
     fi
     echo -e "\033[0;32m====================\033[0m\n"
