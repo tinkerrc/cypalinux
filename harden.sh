@@ -46,9 +46,6 @@ harden_impl() {
     bash
 }
 
-export -f harden
-export -f harden_impl
-
 section_preliminaries() {
     mkdir -p "$DATA"
     setxkbmap -option caps:swapescape
