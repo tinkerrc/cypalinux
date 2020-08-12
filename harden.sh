@@ -6,6 +6,9 @@ else
     exit 1
 fi
 
+# Export all functions
+set -a
+
 # shellcheck source=./common.sh
 source "$(dirname "$0")/common.sh"
 
