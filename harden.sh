@@ -61,7 +61,6 @@ section_preliminaries() {
         exit 1
     fi
 
-    todo "Don't forget to use 'script' to record the output"
     todo "Launch a root shell in another terminal in case something goes wrong"
 
     do_task ensure_vim
