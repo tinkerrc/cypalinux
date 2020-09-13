@@ -19,6 +19,7 @@ source "$(dirname "$0")/common.sh"
 
 harden() {
     echo " +++ $(date '+%Y-%m-%d %H:%M:%S %Z') ====================" >> "$DATA/log"
+    touch "$DATA/log"
     script -ac harden_impl "$DATA/log"
 }
 
