@@ -11,6 +11,8 @@ BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export BASE
 export DATA="$HOME/.harden"
 export BACKUP=/backup
+mkdir -p $DATA
+mkdir -p $BACKUP
 
 # ====================
 # Utilities
