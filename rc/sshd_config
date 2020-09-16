@@ -5,7 +5,7 @@ HostKey /etc/ssh/ssh_host_rsa_key
 HostKey /etc/ssh/ssh_host_dsa_key
 HostKey /etc/ssh/ssh_host_ecdsa_key
 HostKey /etc/ssh/ssh_host_ed25519_key
-UsePrivilegeSeparation yes
+UsePrivilegeSeparation sandbox
 KeyRegenerationInterval 3600
 ServerKeyBits 1024
 SyslogFacility AUTH
@@ -24,7 +24,7 @@ X11Forwarding no
 X11DisplayOffset 10
 PrintMotd no
 PrintLastLog yes
-TCPKeepAlive yes
+TCPKeepAlive no
 AcceptEnv LANG LC_*
 Subsystem sftp /usr/lib/openssh/sftp-server
 UsePAM yes
@@ -32,3 +32,7 @@ AllowTcpForwarding no
 UseDNS no
 ClientAliveInterval 300
 ClientAliveCountMax 0
+AllowAgentForwarding no
+MaxSessions 2
+MaxAuthTries 3
+Compression no

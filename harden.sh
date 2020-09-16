@@ -10,6 +10,7 @@ fi
 set -a
 
 # shellcheck source=./common.sh
+#
 source "$(dirname "$0")/common.sh"
 
 # ===================================
@@ -18,6 +19,7 @@ source "$(dirname "$0")/common.sh"
 # ===================================
 
 harden() {
+    # TODO add firefox tasks: purge and reinstall; make default; configure carefully
     echo " +++ $(date '+%Y-%m-%d %H:%M:%S %Z') ====================" >> "$DATA/log"
     touch "$DATA/log"
     script -ac harden_impl "$DATA/log"
@@ -49,7 +51,6 @@ harden_impl() {
 }
 
 section_preliminaries() {
-    mkdir -p "$DATA"
     setxkbmap -option caps:swapescape
 
     if ! [ -d "$BASE/rc" ]; then
@@ -173,8 +174,12 @@ chsh_root() {
     read -p "Change root shell to /usr/sbin/nologin? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo root shell => nologin
-        chsh -s /usr/sbin/nologin root
+        echo "This functionality is currently disabled"
+        return
+
+        # inhibits root login and sudo su doesn't work either
+        # echo root shell => nologin
+        # chsh -s /usr/sbin/nologin root
     else
         echo root shell not changed
     fi
@@ -258,6 +263,9 @@ rm_media_files() {
         echo "Warning: backup for home not found"
         ready -n 1 -rp "Press [ENTER] to continue"
     fi
+    # FIXME ask the user before deleting or rather don't delete it at all
+    # just pipe the filenames into a file
+    # or only delete under /home
     locate -0 -i --regex \
         "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
         xargs -0 -t rm | tee "$DATA/banned_files" || echo "Couldn't remove files"
@@ -303,6 +311,9 @@ config_unattended_upgrades() {
     file_uud="50unattended-upgrades"
     cat "$BASE/rc/$file_pdc" > "$dir/$file_pdc"
     cat "$BASE/rc/$file_uud" > "$dir/$file_uud"
+    if which software-properties-gtk &>/dev/null; then
+        software-properties-gtk
+    fi
     echo Unattended upgrades config installed
 }
 
@@ -313,12 +324,9 @@ inspect_apt_src() {
 }
 
 firewall() {
-    read -p "Mark this task as finished? [Y/n] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        touch "$DATA/$1"
-    fi
+    ready "Install ufw and iptables (check if other apt processes are running)"
     apt install -y ufw iptables
+    ready "Configure firewall"
     ufw enable
     ufw allow ssh
     ufw default deny incoming
@@ -392,23 +400,24 @@ audit_pkgs() {
         echo "Will not remove samba."
     fi
 
-    read -rp "Remove vsftpd and openssh-sftp-server? [y/N] "
+    read -rp "Remove vsftpd? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing vsftpd..."
-        apt -my purge vsftpd openssh-sftp-server &> /dev/null
+        apt -my purge vsftpd &> /dev/null
     else
         echo "Will not remove vsftpd/openssh-sftp-server."
     fi
 
-    ready "Press [ENTER] to remove: hydra nmap zenmap john ftp telnet bind9 medusa vino ncat netcat* ophcrack fcrackzip hashcat"
+    # FIXME separate packages
+    ready "Press [ENTER] to remove: malicious packages"
     echo "Removing in 5s"
     sleep 5
-    apt -my purge hydra nmap zenmap john ftp telnet bind9 medusa vino netcat* ophcrack minetest aircrack-ng hashcat fcrackzip > /dev/null
+    apt -my --ignore-missing purge hydra nmap zenmap john ftp telnet bind9 medusa vino netcat* ophcrack minetest aircrack-ng fcrackzip > /dev/null
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
     echo "Installing additional packages..."
     apt install apparmor apparmor-profiles clamav rkhunter chkrootkit
-    read -rp "Run apt upgrade?"
+    read -n 1 -rp "Run apt upgrade? [y/N] "
     if [[ $REPLY = "y" ]]; then
         apt update -y
         apt dist-upgrade -y
@@ -491,9 +500,6 @@ fix_file_perms() {
     # not directories
     find /home -maxdepth 3 -mindepth 2 -path "*.ssh*" -type f -exec chmod 600 {} \; -print
     echo "Secured home and .ssh/* permissions"
-
-    ready "Inspect /home and /home/* owners and permissions"
-    bash
     echo "Inspection complete"
 }
 
@@ -714,10 +720,13 @@ inspect_file_attrs() {
     ready "Take action in bash"
     bash
     ready "Search for files with special attributes"
-    lsattr -R /etc | grep -v -e '--------------e-----'
-    lsattr -R /home | grep -v -e '--------------e-----'
-    lsattr -R /root | grep -v -e '--------------e-----'
-    lsattr -R /var | grep -v -e '--------------e-----'
+    echo '---- begin'
+    lsattr -R /etc 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+    lsattr -R /home 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+    lsattr -R /root 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+    lsattr -R /var 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+    echo '---- end'
+    echo "Files listed above contains special file attributes"
     ready "Take action in bash"
     bash
 }

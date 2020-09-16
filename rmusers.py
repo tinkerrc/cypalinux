@@ -3,9 +3,10 @@
 import os
 import subprocess
 import sys
+from pwd import getpwnam
 
 if os.geteuid() != 0:
-   exit('You must be root')
+    sys.exit('You must be root')
 
 auth_file = sys.argv[1]
 unchecked_file = sys.argv[2]
@@ -15,17 +16,19 @@ pw = sys.argv[4]
 
 authed = []
 with open(auth_file, "r") as f:
-   authed = list(filter(None, f.read().split(sep='\n')))
+    authed = list(filter(None, f.read().split(sep='\n')))
 
 unchecked = []
 with open(unchecked_file, "r") as f:
-   unchecked = list(filter(None, f.read().split(sep='\n')))
+    unchecked = list(filter(None, f.read().split(sep='\n')))
 
 with open(unauthed_file, "w") as f:
-   for user in unchecked:
-      if user not in authed:
-         answer = input("Found unauthorized user " + user + ", remove? [y/N] ").lower()
-         if answer == 'y':
-            subprocess.call(['deluser', "--remove-home", user])
-            f.write(user + "\n")
-      subprocess.call(['usermod', '-p', pw, user])
+    for user in unchecked:
+        if user not in authed:
+            answer = input("Found unauthorized user " + user
+                           + " with UID " + str(getpwnam(user).pw_uid) +
+                           ", remove? [y/N] ").lower()
+            if answer == 'y':
+                subprocess.call(['deluser', "--remove-home", user])
+                f.write(user + "\n")
+                subprocess.call(['usermod', '-p', pw, user])

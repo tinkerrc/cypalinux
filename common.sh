@@ -9,7 +9,7 @@ unalias -a
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export BASE
-export DATA="$HOME/.harden"
+export DATA="/.harden"
 export BACKUP=/backup
 mkdir -p $DATA
 mkdir -p $BACKUP
