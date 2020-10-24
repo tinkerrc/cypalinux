@@ -10,7 +10,6 @@ fi
 set -a
 
 # shellcheck source=./common.sh
-#
 source "$(dirname "$0")/common.sh"
 
 # ===================================
@@ -20,17 +19,15 @@ source "$(dirname "$0")/common.sh"
 
 harden() {
     # TODO add firefox tasks: purge and reinstall; make default; configure carefully
-    echo " +++ $(date '+%Y-%m-%d %H:%M:%S %Z') ====================" >> "$DATA/log"
-    touch "$DATA/log"
     script -ac harden_impl "$DATA/log"
 }
 
 harden_impl() {
+    echo "=== $(date '+%Y-%m-%d %H:%M:%S %Z') ====================" >> "$DATA/log"
     echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
-    echo " => Current time   : $(date '+%Y-%m-%d %H:%M:%S %Z')"
-    echo " => Data directory : $DATA"
-    echo " => Base directory : $BASE"
-    echo " => Output file    : $DATA/log"
+    echo "=> Data directory : $DATA"
+    echo "=> Base directory : $BASE"
+    echo "=> Output file    : $DATA/log"
 
     section_preliminaries
     section_get_started
@@ -75,6 +72,7 @@ section_preliminaries() {
 section_get_started() {
     do_task readme
     do_task do_fq
+    do_task firefox_config
 }
 
 section_user_audit() {
@@ -743,4 +741,8 @@ view_ps() {
     ps axjf
     ready "Take action in bash"
     bash
+}
+
+firefox_config() {
+    todo "Configure Firefox"
 }
