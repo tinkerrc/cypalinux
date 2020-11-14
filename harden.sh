@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # TODO: nginx
+if [ ! "$(whoami)" = "root" ]; then
+    echo Please try again with root priviliges...
+    exit 1
+fi
 if [[ $_ != "$0" ]]; then
     echo "Invoke harden to secure the machine"
 else
@@ -53,11 +57,6 @@ section_preliminaries() {
 
     if ! [ -d "$BASE/rc" ]; then
         echo "The resources directory is missing"
-        exit 1
-    fi
-
-    if [ ! "$(whoami)" = "root" ]; then
-        echo Please try again with root priviliges...
         exit 1
     fi
 
