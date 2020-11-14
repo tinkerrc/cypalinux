@@ -393,7 +393,7 @@ config_common() {
 }
 
 audit_pkgs() {
-    read -rp "Remove apache2? [y/N] "
+    read -n 1 -rp "Remove apache2? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing apache2..."
         apt -my purge apache2 &> /dev/null
@@ -401,7 +401,7 @@ audit_pkgs() {
         echo "Will not remove apache2."
     fi
 
-    read -rp "Remove samba? [y/N] "
+    read -n 1 -rp "Remove samba? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing samba..."
         apt -my purge samba* &> /dev/null
@@ -409,7 +409,7 @@ audit_pkgs() {
         echo "Will not remove samba."
     fi
 
-    read -rp "Remove vsftpd? [y/N] "
+    read -n 1 -rp "Remove vsftpd? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing vsftpd..."
         apt -my purge vsftpd &> /dev/null
@@ -417,15 +417,16 @@ audit_pkgs() {
         echo "Will not remove vsftpd/openssh-sftp-server."
     fi
 
-    # FIXME separate packages
     ready "Press [ENTER] to remove: malicious packages"
-    echo "Removing in 5s"
+    echo "Removing in 5s..."
     sleep 5
-    apt -my --ignore-missing purge hydra nmap zenmap john ftp telnet bind9 medusa vino netcat* ophcrack minetest aircrack-ng fcrackzip > /dev/null
+    echo "Removing..."
+    apt -my --ignore-missing purge hydra nmap zenmap john ftp telnet bind9 netcat* &>/dev/null
+    apt -my --ignore-missing medusa vino ophcrack minetest aircrack-ng fcrackzip &>/dev/null
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
     echo "Installing additional packages..."
-    apt install apparmor apparmor-profiles clamav rkhunter chkrootkit
+    apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit
     read -n 1 -rp "Run apt upgrade? [y/N] "
     if [[ $REPLY = "y" ]]; then
         apt update -y
