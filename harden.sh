@@ -336,15 +336,16 @@ firewall() {
     ready "Install ufw and iptables (check if other apt processes are running)"
     apt install -y ufw iptables
     ready "Configure firewall"
+    chmod 751 /lib/ufw
     ufw enable
-    ufw allow ssh
+    ufw logging high
     ufw default deny incoming
     ufw default allow outgoing
+    ufw allow ssh
     ufw deny telnet
     ufw deny 2049
     ufw deny 515
     ufw deny 111
-    ufw logging high
     echo Allows outgoing traffic by default
     echo Denies incoming traffic by default
     echo "Allow   :  SSH"
