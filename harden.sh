@@ -352,8 +352,8 @@ firewall() {
     echo "Reject  :  Telnet"
     ufw status verbose
     if [ -f /etc/ufw/sysctl.conf ]; then
-        ready "Inspect UFW override config"
-        vim /etc/ufw/sysctl.conf
+        cp /etc/ufw/sysctl.conf "$BACKUP"
+        sed 's:\.:/:g' "$BASE/rc/sysctl.conf" > /etc/ufw/sysctl.conf
     fi
     ready "Further modify UFW settings according to README (e.g., ufw allow 80)"
     bash
