@@ -186,10 +186,11 @@ chsh_root() {
 remove_unauth_users() {
     ready "Enter a list of authorized users"
     vim "$DATA/auth"
-    awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/unchecked"
-    echo Please enter a new password for all users
-    pass=$(openssl passwd -1)
-    python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/unchecked" "$DATA/unauthed" "$pass"
+    read -rsp "Enter a new password: "
+    echo
+    sed "s/$/: $REPLY/" "$DATA/auth" | chpasswd
+    awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
+    python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/check" "$DATA/unauth"
     echo User audit complete
 }
 

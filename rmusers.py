@@ -11,8 +11,6 @@ if os.geteuid() != 0:
 auth_file = sys.argv[1]
 unchecked_file = sys.argv[2]
 unauthed_file = sys.argv[3]
-pw = sys.argv[4]
-
 
 authed = []
 with open(auth_file, "r") as f:
@@ -25,10 +23,13 @@ with open(unchecked_file, "r") as f:
 with open(unauthed_file, "w") as f:
     for user in unchecked:
         if user not in authed:
+            uid = str(getpwnam(user).pw_uid)
             answer = input("Found unauthorized user " + user
-                           + " with UID " + str(getpwnam(user).pw_uid) +
+                           + " with UID " + uid +
                            ", remove? [y/N] ").lower()
             if answer == 'y':
                 subprocess.call(['deluser', "--remove-home", user])
                 f.write(user + "\n")
-                subprocess.call(['usermod', '-p', pw, user])
+                print("User '" + user + "' (" + uid + ") removed")
+            else:
+                print("User '" + user + "' (" + uid + ") not removed")
