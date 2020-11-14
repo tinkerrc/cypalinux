@@ -747,7 +747,7 @@ inspect_unit_files() {
 
 view_ps() {
     ready "View process hierarchy"
-    ps axjf
+    ps axjf | less
     ready "Take action in bash"
     bash
 }
