@@ -739,7 +739,7 @@ inspect_file_attrs() {
     lsattr -R /root 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
     lsattr -R /var 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
     echo '---- end'
-    echo "Files listed above contains special file attributes"
+    echo "Files listed above contain special file attributes"
     ready "Take action in bash"
     bash
 }
