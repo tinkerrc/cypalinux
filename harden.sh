@@ -476,6 +476,8 @@ inspect_cron() {
 }
 
 fix_file_perms() {
+    chown root:root /
+    chmod 751 /
     chmod 644 /etc/passwd
     chown root:root /etc/passwd
     chmod 644 /etc/group
