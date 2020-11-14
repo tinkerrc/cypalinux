@@ -319,6 +319,7 @@ inspect_apt_src() {
     ready "Inspect apt sources"
     vim /etc/apt/sources.list
     vim /etc/apt/sources.list.d/
+    apt update -y
 }
 
 firewall() {
