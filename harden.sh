@@ -146,7 +146,7 @@ ensure_python3() {
 
 backup() {
     echo Backing up files...
-    mkdir "$BACKUP"
+    mkdir -p "$BACKUP" || true
     cp -a /home "$BACKUP" || true
     cp -a /etc "$BACKUP" || true
     cp -a /var "$BACKUP" || true
@@ -233,8 +233,16 @@ restart_sshd() {
 }
 
 config_sshd() {
-    ready "Diff sshd config"
-    vim -d /etc/ssh/sshd_config "$BASE/rc/sshd_config"
+    ready "View current sshd config"
+    vim /etc/ssh/sshd_config
+    read -rp "Overwrite with secure config? [y/N] "
+    if [[ $REPLY = "y" ]]; then
+        mv /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
+        cp "$BASE/rc/sshd_config" /etc/ssh
+    else
+        ready "Diff sshd config"
+        vim -d /etc/ssh/sshd_config "$BASE/rc/sshd_config"
+    fi
     restart_sshd
     echo sshd config complete
 }
