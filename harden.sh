@@ -320,7 +320,7 @@ config_unattended_upgrades() {
     cat "$BASE/rc/$file_pdc" > "$dir/$file_pdc"
     cat "$BASE/rc/$file_uud" > "$dir/$file_uud"
     if which software-properties-gtk &>/dev/null; then
-        software-properties-gtk
+        todo Launch software-properties-gtk
     fi
     echo Unattended upgrades config installed
 }
