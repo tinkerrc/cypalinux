@@ -23,7 +23,6 @@ source "$(dirname "$0")/common.sh"
 # ===================================
 
 harden() {
-    # TODO add firefox tasks: purge and reinstall; make default; configure carefully
     script -ac harden_impl "$DATA/log"
 }
 
@@ -759,5 +758,7 @@ view_ps() {
 }
 
 firefox_config() {
+    apt purge -y firefox &>/dev/null
+    apt install -y firefox
     todo "Configure Firefox"
 }
