@@ -442,8 +442,7 @@ inspect_ports() {
     echo ----
     lsof -i -n -P
     echo ----
-    ready "Take action in bash"
-    # TODO: make sure netstat is not compromised, otherwise install nmap
+    ready "Take action in bash (check if netstat / ss is compromised)"
     bash
 }
 
