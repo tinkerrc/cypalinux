@@ -269,13 +269,15 @@ rm_media_files() {
         echo "Warning: backup for home not found"
         ready -n 1 -rp "Press [ENTER] to continue"
     fi
-    # FIXME ask the user before deleting or rather don't delete it at all
-    # just pipe the filenames into a file
-    # or only delete under /home
+    mkdir -p "$BACKUP/quarantine"
+    locate -0 -i --regex \
+        "^/home/.*\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
+        tee "$DATA/banned_files" | xargs -0 -t mv -t "$BACKUP/quarantine" || echo "Couldn't remove files"
     locate -0 -i --regex \
         "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
-        xargs -0 -t rm | tee "$DATA/banned_files" || echo "Couldn't remove files"
-    echo "The above files are deleted. The file names are stored in $DATA/banned_files"
+        grep -Ev '^(/usr|/var/lib)' | tee "$DATA/sus_files"
+    echo "Media files in /home are quarantined in $BACKUP/quarantine (see $DATA/banned_files)."
+    echo "Also check $DATA/sus_files"
     ready "You might want to look for additional media files and other disallowed files. Check /opt for example"
     bash
 }
