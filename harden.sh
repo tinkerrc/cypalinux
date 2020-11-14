@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO: nginx
 if [[ $_ != "$0" ]]; then
     echo "Invoke harden to secure the machine"
 else

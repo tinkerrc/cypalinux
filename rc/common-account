@@ -1,1 +1,2 @@
 account required pam_unix.so
+account required pam_tally2.so
