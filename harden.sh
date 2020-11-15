@@ -191,6 +191,10 @@ backup() {
     cp -a /var "$BACKUP" || true
     if [ -d "$BACKUP" ]; then
         echo "NOTE: /etc /var and /home are backed up into $BACKUP"
+        ready "Double check the files"
+        cd "$BACKUP"
+        bash
+        cd "$BASE"
     else
         echo "Backup failed; $BACKUP not found"
     fi
