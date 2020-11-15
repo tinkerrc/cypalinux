@@ -747,9 +747,9 @@ suggestions() {
     todo "run https://github.com/openstack/ansible-hardening"
 }
 
-# ===================================
+# ====================
 # @scan
-# ===================================
+# ====================
 
 scan () {
     do-task run-lynis
