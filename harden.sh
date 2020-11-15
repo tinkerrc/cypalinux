@@ -355,7 +355,7 @@ fix-file-perms() {
 fast-audit-pkgs() {
     apt -my --ignore-missing purge hydra nmap zenmap john ftp telnet bind9 netcat*
     apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip
-    apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit
+    apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk
     apt autoremove -y
 }
 
