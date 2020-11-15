@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# TODO: nginx
+set -euo pipefail
+
+# ====================
+# Set up environment
+# ====================
+
 if [ ! "$(whoami)" = "root" ]; then
     echo Please try again with root priviliges...
     exit 1
 fi
-if [[ $_ != "$0" ]]; then
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh' instead"
@@ -13,9 +18,48 @@ fi
 
 # Export all functions
 set -a
+unalias -a
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+export BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+export DATA="/.harden"
+export BACKUP=/backup
+mkdir -p $DATA
+mkdir -p $BACKUP
 
-# shellcheck source=./common.sh
-source "$(dirname "$0")/common.sh"
+# ====================
+# Helper functions
+# ====================
+
+todo () {
+    # Follow the instruction; might have to leave terminal
+    echo -e "\033[0;31;1;4mTODO:\033[0m $*"
+    read -n 1 -rp "Press [ENTER] when you finish"
+}
+
+ready() {
+    # Wait for user to be ready
+    echo -e "\033[0;35;1;4mREADY:\033[0m $*"
+    read -n 1 -rp "Press [ENTER] when you are ready"
+}
+
+do_task() {
+    # in case the script is stopped midway
+    # we don't have to go through everything again
+    # unless it is not marked complete
+    if [ -f "$DATA/$1" ]; then
+        return
+    fi
+    echo -e "\033[0;32mTask: $*\033[0m" | tr _ ' '
+    eval "$@"
+    echo
+    echo "Tip: Don't forget to record scoring reports and take notes!"
+    read -p "Done with the task? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        touch "$DATA/$1"
+    fi
+    echo -e "\033[0;32m====================\033[0m\n"
+}
 
 # ===================================
 # CyPa Hardening Script (Team 1)
@@ -40,14 +84,9 @@ harden_impl() {
     section_disallowed
     section_common_config
     section_rare_vulns
-
-    restart_sshd
-    todo "Run scan.sh in a new terminal window"
-    do_task suggestions
     echo Done!
 
-    # keep a root shell in case something goes wrong
-    echo Here is a root shell for your convenience
+    # "script"ed in $DATA/log
     bash
 }
 
@@ -119,6 +158,8 @@ section_rare_vulns() {
     do_task inspect_resolv
     do_task config_fail2ban
     do_task inspect_file_attrs
+    todo "Source harden.sh and invoke 'scan' in a new terminal window"
+    do_task suggestions
 }
 
 # ====================
@@ -145,7 +186,6 @@ ensure_python3() {
 
 backup() {
     echo Backing up files...
-    mkdir -p "$BACKUP" || true
     cp -a /home "$BACKUP" || true
     cp -a /etc "$BACKUP" || true
     cp -a /var "$BACKUP" || true
@@ -763,4 +803,66 @@ firefox_config() {
     apt purge -y firefox &>/dev/null
     apt install -y firefox
     todo "Configure Firefox"
+}
+
+# ===================================
+# Scanning
+# ===================================
+
+scan () {
+    do_task run_lynis
+    do_task run_linenum
+    do_task run_linpeas
+    do_task av_scan
+}
+
+run_lynis() {
+    cd "$DATA"
+    if ! [[ -d "$DATA/lynis" ]]; then
+        git clone --depth 1 https://github.com/CISOfy/lynis
+    fi
+    cd lynis
+    clear
+    ready 'Start lynis'
+    ./lynis audit system
+    ready "Inspect; run lynis scans under other modes if necessary"
+    bash
+}
+
+run_linenum() {
+    cd "$DATA"
+    if ! [[ -d $DATA/LinEnum ]]; then
+       git clone https://github.com/rebootuser/LinEnum
+    fi
+    cd LinEnum
+    chmod u+x ./LinEnum.sh
+    ./LinEnum.sh -t -e "$DATA" -r enum
+    cat enum
+    ready "Inspect"
+    bash
+}
+
+av_scan() {
+    echo --AV Scans--
+    ready "Start chkrootkit scan"
+    chkrootkit
+
+    ready "Start rkhunter scan"
+    rkhunter --update
+    rkhunter --propupd
+    rkhunter -c --enable all --disable none
+
+    ready "Start ClamAV scan"
+    freshclam --stdout
+    clamscan -r -i --stdout --exclude-dir="^/sys" /
+}
+
+run_linpeas() {
+    cd "$DATA"
+    git clone --depth 1 https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/
+    ready "Run linpeas.sh"
+    ./privilege-escalation-awesome-scripts-suite/linPEAS/linpeas.sh
+    ready "Inspect"
+    bash
+    cd -
 }
