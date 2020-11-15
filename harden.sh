@@ -93,6 +93,7 @@ section-regular() {
     do-task cfg-apache
     do-task cfg-ftp
     do-task cfg-php
+    do-task cfg-mysql
     do-task inspect-www
     do-task inspect-cron
     do-task inspect-ports
@@ -138,7 +139,7 @@ do-task() {
     eval "$@"
     echo
     echo "Tip: Don't forget to record scoring reports and take notes!"
-    read -p "Done with the task? [y/N] " -n 1 -r
+    read -p "Done with the task? [yN] " -n 1 -r
     echo; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         touch "$DATA/$1"
@@ -353,7 +354,7 @@ fix-file-perms() {
     echo "Inspection complete"
 }
 fast-audit-pkgs() {
-    apt -my --ignore-missing purge hydra nmap zenmap john ftp telnet bind9 netcat*
+    apt -my --ignore-missing purge hydra nmap zenmap john bind9 netcat*
     apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip
     apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk
     apt autoremove -y
@@ -413,7 +414,7 @@ cfg-dm() {
     bash
 }
 lock-root() {
-    read -p "Lock the root account? [y/N] " -n 1 -r
+    read -p "Lock the root account? [yN] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         passwd -l root
@@ -423,7 +424,7 @@ lock-root() {
     fi
 }
 chsh-root() {
-    read -p "Change root shell to /usr/sbin/nologin? [y/N] " -n 1 -r
+    read -p "Change root shell to /usr/sbin/nologin? [yN] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "This functionality is currently disabled"
@@ -445,7 +446,7 @@ audit-pkgs() {
     if (which software-properties-gtk &>/dev/null); then
         todo Launch software-properties-gtk
     fi
-    read -n 1 -rp "Remove apache2? [y/N] "
+    read -n 1 -rp "Remove apache2? [yN] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing apache2..."
         apt -my purge apache2
@@ -453,7 +454,7 @@ audit-pkgs() {
         echo "Will not remove apache2."
     fi
 
-    read -n 1 -rp "Remove samba? [y/N] "
+    read -n 1 -rp "Remove samba? [yN] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing samba..."
         apt -my purge samba*
@@ -461,7 +462,7 @@ audit-pkgs() {
         echo "Will not remove samba."
     fi
 
-    read -n 1 -rp "Remove vsftpd? [y/N] "
+    read -n 1 -rp "Remove vsftpd? [yN] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing vsftpd..."
         apt -my purge vsftpd
@@ -514,13 +515,13 @@ cfg-apache() {
     echo Done
 }
 cfg-ftp() {
-    read -n 1 -rp "Is Pure-FTPD a critical service? [Y/n]"
+    read -n 1 -rp "Is Pure-FTPD a critical service? [Yn]"
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         echo "Removing Pure-FTPD"
-        apt autoremove --purge pure-ftpd
+        apt autoremove -y --purge pure-ftpd
     else
         echo "Installing Pure-FTPD"
-        apt install pure-ftpd
+        apt install -y pure-ftpd
 
         cp -r /etc/pure-ftpd/conf /etc/pure-ftpd/conf.bak
         # TODO: Figure out TLSCipherSuite vs TLS?
@@ -541,7 +542,7 @@ cfg-ftp() {
         systemctl restart pure-ftpd
     fi
 
-    read -n 1 -rp "Is VSFTPD a critical service? [Y/n]"
+    read -n 1 -rp "Is VSFTPD a critical service? [Yn]"
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         echo "Removing VSFTPD"
         apt autoremove --purge vsftpd
@@ -565,7 +566,7 @@ cfg-ftp() {
         systemctl restart vsftpd
     fi
 
-    read -n 1 -rp "Is Pro-FTPD a critical service? [Y/n]"
+    read -n 1 -rp "Is Pro-FTPD a critical service? [Yn]"
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         echo "Removing Pro-FTPD"
         apt autoremove --purge proftpd
@@ -593,6 +594,19 @@ cfg-php() {
         vim -O "$PHPCONF" "$BASE/rc/php.ini"
     else
         echo "PHP not found. No actions necessary."
+    fi
+}
+cfg-mysql() {
+    read -n1 -rp "Is MySQL a critical service? [yn]"
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        apt install -y mysql-server
+        sed -i '/bind-address/ c\bind-address = 127.0.0.1' /etc/mysql/my.cnf
+        sed -i 's/skip-grant-tables.*//' /etc/mysql/my.cnf
+        systemctl restart mysql
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        apt -my --ignore-missing purge mysql*
+    else
+        echo 'No action taken'
     fi
 }
 inspect-www() {
