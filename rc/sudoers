@@ -1,0 +1,6 @@
+Defaults                        log_output
+Defaults!/usr/bin/sudoreplay    !log_output
+Defaults!REBOOT                 !log_output
+root                            ALL=(ALL:ALL) ALL
+%sudo                           ALL=(ALL:ALL) ALL
+#includedir /etc/sudoers.d
