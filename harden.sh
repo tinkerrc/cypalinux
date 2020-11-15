@@ -16,13 +16,13 @@ else
     exit 1
 fi
 
-# Export all functions
+# Export all functions and variables
 set -a
 unalias -a
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-export BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-export DATA="/.harden"
-export BACKUP=/backup
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DATA="/.harden"
+BACKUP=/backup
 mkdir -p $DATA
 mkdir -p $BACKUP
 
@@ -583,7 +583,7 @@ suggestions() {
     todo "set apt settings see phone picture"
     todo "setup auditd?"
     todo "malicious aliases?"
-    todo "check /etc/skel"
+    todo "check /etc/skel and .bashrc"
     todo "check /etc/adduser.conf"
     todo "generate ssh key"
     todo "install scap workbench and scan the system"
