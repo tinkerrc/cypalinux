@@ -383,11 +383,13 @@ config_sysctl() {
 }
 
 config_common() {
-    apt install -y libpam-cracklib
+    echo "Installing configuration files..."
+    apt install -y libpam-cracklib &>/dev/null
     cat "$BASE/rc/common-password" > /etc/pam.d/common-password
     cat "$BASE/rc/common-auth" > /etc/pam.d/common-auth
     cat "$BASE/rc/common-account" > /etc/pam.d/common-account
     cat "$BASE/rc/common-session" > /etc/pam.d/common-session
+    cat "$BASE/rc/common-session-noninteractive" > /etc/pam.d/common-session-noninteractive
     cat "$BASE/rc/login.defs" > /etc/login.defs
     cat "$BASE/rc/host.conf" > /etc/host.conf
     echo PAM config, login.defs, and host.conf have been installed
