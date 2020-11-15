@@ -290,7 +290,7 @@ config_sshd() {
 install_ssh() {
     if ! [ -x /usr/bin/sshd ]; then
         echo Installing openssh-server
-        apt install -y openssh-server > /dev/null
+        apt install -y openssh-server &>/dev/null
         restart_sshd
         echo Installation complete
     fi
@@ -298,7 +298,8 @@ install_ssh() {
 
 rm_media_files() {
     if ! which &>/dev/null; then
-        apt install -y mlocate findutils
+        echo Installing locate utility
+        apt install -y mlocate findutils &>/dev/null
     fi
     ready "Inspect locate config; look for excluded paths and extensions"
     vim /etc/updatedb.conf
@@ -352,7 +353,8 @@ config_dm() {
 }
 
 config_unattended_upgrades() {
-    apt install -y unattended-upgrades
+    echo Installing unattended-upgrades...
+    apt install -y unattended-upgrades &>/dev/null
     dir=/etc/apt/apt.conf.d
     mkdir -p "$dir" # should already be ther
     file_pdc="10periodic"
@@ -369,12 +371,15 @@ inspect_apt_src() {
     ready "Inspect apt sources"
     vim /etc/apt/sources.list
     vim /etc/apt/sources.list.d/
-    apt update -y
+    echo Updating APT sources...
+    apt update -y &>/dev/null
+    echo Done
 }
 
 firewall() {
     ready "Install ufw and iptables (check if other apt processes are running)"
-    apt install -y ufw iptables
+    echo Installing...
+    apt install -y ufw iptables &>/dev/null
     ready "Configure firewall"
     chmod 751 /lib/ufw
     ufw enable
@@ -439,7 +444,7 @@ audit_pkgs() {
     read -n 1 -rp "Remove apache2? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing apache2..."
-        apt -my purge apache2 &> /dev/null
+        apt -my purge apache2
     else
         echo "Will not remove apache2."
     fi
@@ -447,7 +452,7 @@ audit_pkgs() {
     read -n 1 -rp "Remove samba? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing samba..."
-        apt -my purge samba* &> /dev/null
+        apt -my purge samba*
     else
         echo "Will not remove samba."
     fi
@@ -455,7 +460,7 @@ audit_pkgs() {
     read -n 1 -rp "Remove vsftpd? [y/N] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing vsftpd..."
-        apt -my purge vsftpd &> /dev/null
+        apt -my purge vsftpd
     else
         echo "Will not remove vsftpd/openssh-sftp-server."
     fi
@@ -464,8 +469,8 @@ audit_pkgs() {
     echo "Removing in 5s..."
     sleep 5
     echo "Removing..."
-    apt -my --ignore-missing purge hydra nmap zenmap john ftp telnet bind9 netcat* &>/dev/null
-    apt -my --ignore-missing medusa vino ophcrack minetest aircrack-ng fcrackzip &>/dev/null
+    apt -my --ignore-missing purge hydra nmap zenmap john ftp telnet bind9 netcat*
+    apt -my --ignore-missing medusa vino ophcrack minetest aircrack-ng fcrackzip
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
     echo "Installing additional packages..."
@@ -748,7 +753,7 @@ inspect_resolv() {
 
 ensure_vim() {
     if ! which vim &>/dev/null; then
-        apt install -y vim
+        apt install -y vim &>/dev/null
         echo "Installed vim"
     else
         echo "Vim is already installed"
