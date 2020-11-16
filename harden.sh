@@ -21,7 +21,7 @@ fi
 set -a # export all functions and variables
 unalias -a
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
-BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
 DATA="/.harden"
 BACKUP=/backup
 mkdir -p $DATA
@@ -354,8 +354,8 @@ fix-file-perms() {
     echo "Inspection complete"
 }
 fast-audit-pkgs() {
-    apt -my --ignore-missing purge hydra nmap zenmap john bind9 netcat*
-    apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip
+    apt -my --ignore-missing purge hydra* nmap zenmap john* bind9 netcat*
+    apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip nikto*
     apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk
     apt autoremove -y
 }
@@ -492,7 +492,7 @@ inspect-svc() {
     bash
 }
 cfg-apache() {
-    echo 'Securing apache2 config'
+    echo Securing apache2 config
     if [ -f /etc/apache2/apache2.conf ]; then
         {
             echo "<Directory />"
@@ -502,15 +502,17 @@ cfg-apache() {
             echo "</Directory>"
             echo "UserDir disabled root"
         } >> /etc/apache2/apache2.conf
-        echo "Success."
+        ufw allow http
+        ufw allow https
+        echo Successfully configured Apache2
 
         ready "Inspect config"
         vim /etc/apache2/apache2.conf
 
         echo Restarting apache2
-        systemctl restart apache2 || service apache2 restart || echo "Failed to restart Apache2"
+        systemctl restart apache2 || service apache2 restart || echo Failed to restart Apache2
     else
-        echo "No apache2 config found"
+        echo No apache2 config found
     fi
     echo Done
 }
