@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -u
 
-#   ===================================
-#   | CyPa Hardening Script (Team 1)  |
-#   | Walnut HS Cyber Security Club   |
-#   ===================================
+#   ==================================
+#   | CyPa Hardening Script (Team 1) |
+#   | Walnut HS Cyber Security Club  |
+#   ==================================
 
 if [ ! "$(whoami)" = "root" ]; then
-    echo Please try again with root priviliges...
+    echo "Please try again with root privileges..."
     exit 1
 fi
 
-if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh' instead"
@@ -23,7 +23,7 @@ unalias -a
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
 DATA="/.harden"
-BACKUP=/backup
+BACKUP="/backup"
 mkdir -p $DATA
 mkdir -p $BACKUP
 
@@ -41,7 +41,7 @@ harden-impl() {
     echo "=> Base directory : $BASE"
     echo "=> Output file    : $DATA/log"
 
-    setxkbmap -option caps:swapescape
+    ready "Run 'setxkbmap -option caps:swapescape' as a regular user"
 
     if ! [ -d "$BASE/rc" ]; then
         echo "The resources directory is missing"
@@ -53,7 +53,7 @@ harden-impl() {
     section-common
     section-regular
     section-rare
-    echo Done!
+    echo "Done!"
 
     bash
 }
@@ -146,7 +146,7 @@ do-task() {
     fi
 }
 restart-sshd() {
-    echo Restarting sshd
+    echo "Restarting sshd"
     if ! (systemctl restart sshd || service ssh restart); then
         echo "Failed to restart sshd"
         ready "Ensure sshd is running"
@@ -171,7 +171,7 @@ install-apt-src() {
     apt update -y
 }
 backup() {
-    echo Backing up files...
+    echo "Backing up files..."
     cp -a /home "$BACKUP" || true
     cp -a /etc "$BACKUP" || true
     cp -a /var "$BACKUP" || true
@@ -187,7 +187,7 @@ backup() {
 }
 ensure-vim() {
     if ! which vim &>/dev/null; then
-        echo Installing vim
+        echo "Installing vim"
         apt install -y vim &>/dev/null
         echo "Installed vim"
     else
@@ -195,38 +195,38 @@ ensure-vim() {
     fi
 }
 ensure-python3() {
-    echo Checking python3 installation...
+    echo "Checking python3 installation..."
     if ! (python3 --version >/dev/null); then
         ready "Try installing python3"
         bash
     else
-        echo Python3 is installed.
+        echo "Python3 is installed."
     fi
 }
 cfg-unattended-upgrades() {
-    echo Installing unattended-upgrades...
+    echo "Installing unattended-upgrades..."
     apt install -y unattended-upgrades
     dir=/etc/apt/apt.conf.d
     mkdir -p "$dir" # should already be ther
-    file-pdc="10periodic"
+    file_pdc="10periodic"
     file_uud="50unattended-upgrades"
-    cat "$BASE/rc/$file-pdc" > "$dir/$file_pdc"
+    cat "$BASE/rc/$file_pdc" > "$dir/$file_pdc"
     cat "$BASE/rc/$file_uud" > "$dir/$file_uud"
 }
 cfg-sshd() {
     if ! [ -x /usr/bin/sshd ]; then
-        echo Installing openssh-server
+        echo "Installing openssh-server"
         apt install -y openssh-server
-        echo Installation complete
+        echo "Installation complete"
     fi
     mv /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
     cp "$BASE/rc/sshd_config" /etc/ssh
     restart-sshd
-    echo New sshd_config applied
+    echo "New sshd_config applied"
 }
 rm-media-files() {
     if ! (which locate &>/dev/null); then
-        echo Installing locate utility
+        echo "Installing locate utility"
         apt install -y mlocate findutils
     fi
     cat "$BASE/rc/updatedb.conf" > /etc/updatedb.conf
@@ -251,7 +251,7 @@ rm-media-files() {
 }
 firewall() {
     ready "Install ufw and iptables (check if other apt processes are running)"
-    echo Installing...
+    echo "Installing..."
     apt install -y ufw iptables
     ready "Configure firewall"
     chmod 751 /lib/ufw
@@ -264,10 +264,10 @@ firewall() {
     ufw deny 2049
     ufw deny 515
     ufw deny 111
-    echo Allows outgoing traffic by default
-    echo Denies incoming traffic by default
+    echo "Allows outgoing traffic by default"
+    echo "Denies incoming traffic by default"
     echo "Allow   :  SSH"
-    echo "Reject  :  Telnet"
+    echo "Reject  :  Telnet, 111, 555, 2049"
     ufw status verbose
     if [ -f /etc/ufw/sysctl.conf ]; then
         cp /etc/ufw/sysctl.conf "$BACKUP"
@@ -279,13 +279,13 @@ firewall() {
 cfg-sysctl() {
     cat "$BASE/rc/sysctl.conf" > /etc/sysctl.conf
     sysctl -e -p /etc/sysctl.conf
-    echo /etc/sysctl.conf has been installed
+    echo "/etc/sysctl.conf has been installed"
 }
 cfg-sudoer() {
     ready "Press [ENTER] to launch visudo"
     cp /etc/sudoers{,.bak}
     cat "$BASE/rc/sudoers" > /etc/sudoers
-    echo Sudoers audit complete
+    echo "Sudoers audit complete"
 }
 cfg-common() {
     echo "Installing configuration files..."
@@ -297,7 +297,7 @@ cfg-common() {
     cat "$BASE/rc/common-session-noninteractive" > /etc/pam.d/common-session-noninteractive
     cat "$BASE/rc/login.defs" > /etc/login.defs
     cat "$BASE/rc/host.conf" > /etc/host.conf
-    echo PAM config, login.defs, and host.conf have been installed
+    echo "PAM config, login.defs, and host.conf have been installed"
 }
 cfg-fail2ban() {
     apt install -y fail2ban
@@ -306,13 +306,13 @@ cfg-fail2ban() {
     systemctl restart fail2ban || service fail2ban restart || echo "Failed to restart fail2ban"
 }
 restrict-cron() {
-    echo 'Setting allowed cron/at users to root'
+    echo "Setting allowed cron/at users to root"
     crontab -r # reset crontabs
     # only root can use cron & at
-    echo root > /etc/cron.allow
-    echo root > /etc/at.allow
+    echo "root" > /etc/cron.allow
+    echo "root" > /etc/at.allow
     chmod 644 /etc/{cron,at}.allow
-    echo Done!
+    echo "Done!"
 }
 fix-file-perms() {
     chown root:root /
@@ -342,7 +342,7 @@ fix-file-perms() {
     chmod 700 /boot
     chmod 1777 /tmp
     chown root:root /tmp
-    echo Common system file permissions corrected
+    echo "Common system file permissions corrected"
 
     chmod 755 /home
     chmod 700 /home/*
@@ -354,7 +354,7 @@ fix-file-perms() {
     echo "Inspection complete"
 }
 fast-audit-pkgs() {
-    apt -my --ignore-missing purge hydra* nmap zenmap john* bind9 netcat*
+    apt -my --ignore-missing purge hydra* nmap zenmap john* bind9 netcat* build-essential
     apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip nikto*
     apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk
     apt autoremove -y
@@ -375,27 +375,27 @@ user-audit() {
     sed "s/$/: password/" "$DATA/auth" | chpasswd
     awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
     python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/check" "$DATA/unauth"
-    echo User audit complete
+    echo "User audit complete"
 }
 inspect-passwd() {
     grep :0: /etc/passwd
     ready "Inspect abnormal users (eg. UID 0, weird shell/home)"
     vim /etc/passwd
-    echo /etc/passwd inspection complete
+    echo "/etc/passwd inspection complete"
 }
 inspect-group() {
+    # TODO: set sudo users automatically
     grep adm /etc/group
     grep sudo /etc/group
     ready "Inspect groups"
     vim /etc/group
-    echo /etc/group inspection complete
+    echo "/etc/group inspection complete"
 }
 cfg-dm() {
-    echo "" > "$DATA/lightdmconf" # clear file
+    echo > "$DATA/lightdmconf" # clear file
     while read -r line
     do
-        if [[ ! $line =~ ^allow-guest=[a-z]+ ]];
-        then
+        if [[ ! $line =~ ^allow-guest=[a-z]+ ]]; then
             echo "$line" >> "$DATA/lightdmconf"
         fi
     done < /etc/lightdm/lightdm.conf
@@ -418,24 +418,18 @@ lock-root() {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         passwd -l root
-        echo root account locked
+        echo "root account locked"
     else
-        echo root account not locked
+        echo "root account not locked"
     fi
 }
 chsh-root() {
     read -p "Change root shell to /usr/sbin/nologin? [yN] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "This functionality is currently disabled"
-        echo "Please manually lock the root account"
-        return
-
-        # inhibits root login and sudo su doesn't work either
-        # echo root shell => nologin
-        # chsh -s /usr/sbin/nologin root
+        chsh -s "$(which nologin)" root
     else
-        echo root shell not changed
+        echo "root shell not changed"
     fi
 }
 find-pw-text-files() {
@@ -467,7 +461,7 @@ audit-pkgs() {
         echo "Removing vsftpd..."
         apt -my purge vsftpd
     else
-        echo "Will not remove vsftpd/openssh-sftp-server."
+        echo "Will not remove vsftpd"
     fi
 
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
@@ -492,7 +486,7 @@ inspect-svc() {
     bash
 }
 cfg-apache() {
-    echo Securing apache2 config
+    echo "Securing apache2 config"
     if [ -f /etc/apache2/apache2.conf ]; then
         {
             echo "<Directory />"
@@ -504,17 +498,17 @@ cfg-apache() {
         } >> /etc/apache2/apache2.conf
         ufw allow http
         ufw allow https
-        echo Successfully configured Apache2
+        echo "Successfully configured Apache2"
 
         ready "Inspect config"
         vim /etc/apache2/apache2.conf
 
-        echo Restarting apache2
-        systemctl restart apache2 || service apache2 restart || echo Failed to restart Apache2
+        echo "Restarting apache2"
+        systemctl restart apache2 || service apache2 restart || echo "Failed to restart Apache2"
     else
-        echo No apache2 config found
+        echo "No apache2 config found"
     fi
-    echo Done
+    echo "Done"
 }
 cfg-ftp() {
     read -n 1 -rp "Is Pure-FTPD a critical service? [Yn]"
@@ -589,8 +583,8 @@ cfg-ftp() {
     fi
 }
 cfg-php() {
-    echo --PHP configuration--
-    if php --version >/dev/null; then
+    echo "--PHP configuration--"
+    if which php &>/dev/null; then
         read -rp "Enter php config location (hint: php --ini): " PHPCONF
         ready "Inspect PHP config (original | suggested)"
         vim -O "$PHPCONF" "$BASE/rc/php.ini"
@@ -599,16 +593,21 @@ cfg-php() {
     fi
 }
 cfg-mysql() {
-    read -n1 -rp "Is MySQL a critical service? [yn]"
+    read -n1 -rp "Is MySQL a critical service? [ynA]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         apt install -y mysql-server
+        cp /etc/mysql/my.cnf "$BACKUP"
         sed -i '/bind-address/ c\bind-address = 127.0.0.1' /etc/mysql/my.cnf
         sed -i 's/skip-grant-tables.*//' /etc/mysql/my.cnf
         systemctl restart mysql
+        todo "DROP USER ''@'localhost';"
+        todo "add password to all users (incl. mysql & root)"
+        todo "check if users have the right privileges"
+        ufw deny 3306
     elif [[ $REPLY =~ ^[Nn]$ ]]; then
         apt -my --ignore-missing purge mysql*
     else
-        echo 'No action taken'
+        echo "No action taken"
     fi
 }
 inspect-www() {
@@ -632,7 +631,7 @@ inspect-cron() {
         cd /var/spool/cron/ || true
         bash
     else
-        echo No known crontabs directory found.
+        echo "No known crontabs directory found."
         bash
     fi
     if [ -f /etc/anacrontab ]; then
@@ -666,9 +665,9 @@ inspect-netcat() {
         echo ----
         bash
     else
-        echo 'No netcat processes found'
+        echo "No netcat processes found"
     fi
-    echo 'Netcat inspection complete'
+    echo "Netcat inspection complete"
 }
 
 # ====================
@@ -680,27 +679,27 @@ inspect-apt-src() {
         ready "Inspect APT sources.list.d"
         vim /etc/apt/sources.list.d/
     fi
-    echo Updating APT sources...
+    echo "Updating APT sources..."
     apt update -y
-    echo Done
+    echo "Done"
 }
 inspect-file-attrs() {
     ready "Search for files with non-base ACL in /home, /etc, and /var"
     getfacl -Rs /home /etc /var | less
 
     ready "Search for files with special attributes"
-    echo '---- begin'
+    echo "---- begin"
     lsattr -R /etc 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
     lsattr -R /home 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
     lsattr -R /root 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
     lsattr -R /var 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
-    echo '---- end'
+    echo "---- end"
     echo "Files listed above contain special file attributes"
 
     ready "Search for setuid files"
-    echo '---- begin'
+    echo "---- begin"
     find / -type f -perm -4000
-    echo '---- end'
+    echo "---- end"
     ready "Take action in bash"
     bash
 }
@@ -714,10 +713,10 @@ inspect-resolv() {
     ready "Inspect /etc/resolv.conf; use 8.8.8.8 for nameserver"
     # TODO: disable systemd dns
     vim /etc/resolv.conf
-    echo Done
+    echo "Done"
 }
 inspect-startup() {
-    echo --Inspect Start-up Scripts--
+    echo "--Inspect Start-up Scripts--"
     if [ -f /etc/rc.local ]; then
         ready "Inspect /etc/rc.local"
         vim /etc/rc.local
@@ -736,7 +735,7 @@ inspect-unit-files() {
 }
 secure-fs() {
     echo "tmpfs      /dev/shm    tmpfs   defaults,noexec,nodev,nosuid   0 0" >> /etc/fstab
-    umount /dev/shm && mount /dev/shm || echo Failed to remount /dev/shm with new settings
+    umount /dev/shm && mount /dev/shm || echo "Failed to remount /dev/shm with new settings"
     ready "Inspect /etc/fstab"
     vim /etc/fstab
 }
@@ -780,25 +779,35 @@ run-lynis() {
     fi
     cd lynis
     clear
-    ready 'Start lynis'
+    ready "Start lynis"
     ./lynis audit system
-    ready "Inspect; run lynis scans under other modes if necessary"
+    ready "Take action in bash; run lynis under other modes if necessary"
     bash
 }
 run-linenum() {
     cd "$DATA"
-    if ! [[ -d $DATA/LinEnum ]]; then
+    if ! [[ -d "$DATA/LinEnum" ]]; then
        git clone https://github.com/rebootuser/LinEnum
     fi
     cd LinEnum
     chmod u+x ./LinEnum.sh
     ./LinEnum.sh -t -e "$DATA" -r enum
-    cat enum
+    less enum
+    ready "Take action in bash"
+    bash
+}
+run-linpeas() {
+    cd "$DATA"
+    if ! [[ -d "$DATA/peas" ]]; then
+        git clone --depth 1 https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/ peas
+    fi
+    ready "Run linpeas.sh"
+    ./peas/linPEAS/linpeas.sh -a
     ready "Inspect"
     bash
 }
 av-scan() {
-    echo --AV Scans--
+    echo "--AV Scans--"
     ready "Start chkrootkit scan"
     chkrootkit
 
@@ -810,13 +819,4 @@ av-scan() {
     ready "Start ClamAV scan"
     freshclam --stdout
     clamscan -r -i --stdout --exclude-dir="^/sys" /
-}
-run-linpeas() {
-    cd "$DATA"
-    git clone --depth 1 https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/
-    ready "Run linpeas.sh"
-    ./privilege-escalation-awesome-scripts-suite/linPEAS/linpeas.sh
-    ready "Inspect"
-    bash
-    cd -
 }
