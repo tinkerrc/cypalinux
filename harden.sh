@@ -162,7 +162,7 @@ restart-sshd() {
 
 install-apt-src() {
     if (lsb_release -a 2>/dev/null | grep -q 16.04); then
-        cat "$BASE/rc/sources.list.14" > /etc/apt/sources.list
+        cat "$BASE/rc/sources.list.16" > /etc/apt/sources.list
     elif (lsb_release -a 2>/dev/null | grep -q 18.04); then
         cat "$BASE/rc/sources.list.18" > /etc/apt/sources.list
     else
@@ -519,21 +519,28 @@ cfg-ftp() {
         echo "Installing Pure-FTPD"
         apt install -y pure-ftpd
 
-        cp -r /etc/pure-ftpd/conf /etc/pure-ftpd/conf.bak
-        # TODO: Figure out TLSCipherSuite vs TLS?
-        # TODO: Confirm all of these
+        mv /etc/pure-ftpd/conf{,.bak} -n &>/dev/null
+        rm -rf /etc/pure-ftpd/conf
+        cat "$BASE/rc/pure-ftpd.conf" > /etc/pure-ftpd/pure-ftpd.conf
+
+        mkdir /etc/pure-ftpd/conf
         echo "2" > /etc/pure-ftpd/conf/TLS
-        echo "no" > /etc/pure-ftpd/conf/NoAnonymous
+        echo "yes" > /etc/pure-ftpd/conf/NoAnonymous
         echo "no" > /etc/pure-ftpd/conf/AnonymousOnly
         echo "no" > /etc/pure-ftpd/conf/UnixAuthentication
         echo "yes" > /etc/pure-ftpd/conf/PAMAuthentication
-        # TODO: Figure out ChrootEveryone
+        echo "no" > /etc/pure-ftpd/conf/ChrootEveryone
+        echo "HIGH" > /etc/pure-ftpd/conf/TLSCipherSuite
+        echo "/etc/pure-ftpd/pureftpd.pdb" > /etc/pure-ftpd/conf/PureDB
+        echo "clf:/var/log/pure-ftpd/transfer.log" > /etc/pure-ftpd/conf/AltLog
+        echo "UTF-8" > /etc/pure-ftpd/conf/FSCharset
+        echo "1000" > /etc/pure-ftpd/conf/MinUID
 
-        # TODO: Finish below
-        #mkdir /etc/ssl/private
-        #sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem
-
-        #chmod 600 /etc/ssl/private/pure-ftpd.pem
+        if ! [ -f /etc/ssl/private/pure-ftpd.pem ]; then
+            mkdir -p /etc/ssl/private
+            sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem
+            chmod 600 /etc/ssl/private/pure-ftpd.pem
+        fi
 
         systemctl restart pure-ftpd
     fi
@@ -543,21 +550,16 @@ cfg-ftp() {
         echo "Removing VSFTPD"
         apt autoremove --purge vsftpd
     else
-        apt install vsftpd
+        apt install -y vsftpd
 
-        cp /etc/vsftpd.conf /etc/vsftpd.conf.bak
-        # TODO: confirm all of these
-        sed -i "s/anonymous_enable=.*/anonymous_enable=NO/" /etc/vsftpd.conf
-        sed -i "s/#chroot_local_user=.*/chroot_local_user=YES/" /etc/vsftpd.conf
-        sed -i "s/local_enable=.*/local_enable=YES/" /etc/vsftpd.conf
-        sed -i "s/#write_enable=.*/write_enable=YES/" /etc/vsftpd.conf
-        sed -i "s/ssl_enable=.*/ssl_enable=YES/" /etc/vsftpd.conf
+        cp /etc/vsftpd.conf{,.bak}
+        cp "$BASE/rc/vsftpd.conf" /etc/vsftpd.conf
 
-        # TODO: finish below
-        #mkdir /etc/ssl/private
-        #openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/vsftpd.key -out /etc/ssl/certs/vsftpd.crt
-
-        #chmod 600 /etc/ssl/private/vsftpd.key
+        if ! [ -f /etc/ssl/private/vsftpd.key ]; then
+            mkdir -p /etc/ssl/private
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/vsftpd.key -out /etc/ssl/certs/vsftpd.crt
+            chmod 600 /etc/ssl/private/vsftpd.key
+        fi
 
         systemctl restart vsftpd
     fi
@@ -567,19 +569,20 @@ cfg-ftp() {
         echo "Removing Pro-FTPD"
         apt autoremove --purge proftpd
     else
-        apt install proftpd
+        apt install -y proftpd
 
-        cp /etc/proftpd/proftpd.conf /etc/proftpd/protftpd.conf.bak
-        # TODO: confirm all of these
-        sed -i "s/# DefaultRoot\t\t\t~/DefaultRoot\t\t\ton/" /etc/proftpd/proftpd.conf
-        sed -i "s/# RequireValidShell\t\toff/RequireValidShell\t\t\ton/" /etc/proftpd/proftpd.conf
-        sed -i "s/# AuthOrder\t\t\t.*/AuthOrder\t\t\ton/" /etc/proftpd/proftpd.conf
-        # TODO: finish below
-        #mkdir /etc/ssl/private
-        #openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/vsftpd.key -out /etc/ssl/certs/vsftpd.crt
+        cp /etc/proftpd/proftpd.conf{,bak}
+        cat "$BASE/rc/proftpd.conf" > /etc/proftpd/proftpd.conf
+        cat "$BASE/rc/tls.conf" > /etc/proftpd/tls.conf
 
-        #chmod 600 /etc/ssl/private/vsftpd.key
+        if ! [ -f /etc/ssl/private/proftpd.key ]; then
+            mkdir -p /etc/ssl/private
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/proftpd.key -out /etc/ssl/certs/proftpd.crt
+            chmod 600 /etc/ssl/private/proftpd.key
+        fi
+
         systemctl restart proftpd
+        todo "Check /etc/proftpd/conf.d for conflicting configurations"
     fi
 }
 cfg-php() {
@@ -601,6 +604,7 @@ cfg-mysql() {
         sed -i 's/skip-grant-tables.*//' /etc/mysql/my.cnf
         systemctl restart mysql
         todo "DROP USER ''@'localhost';"
+        todo "Check if mysql -uroot prompts for password"
         todo "add password to all users (incl. mysql & root)"
         todo "check if users have the right privileges"
         ufw deny 3306
