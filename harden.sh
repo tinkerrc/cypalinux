@@ -402,15 +402,16 @@ cfg-dm() {
             if [[ ! $line =~ ^allow-guest=[a-z]+ ]]; then
                 echo "$line" >> "$DATA/lightdmconf"
             fi
-        done < /etc/lightdm/lightdm.conf < /usr/share/lightdm/lightdm.conf < /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+        done < <(cat /etc/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf 2>/dev/null)
         {
             echo "[Seat:*]"
             echo "allow-guest=false"
             echo "greeter-hide-users=true"
             echo "greeter-show-manual-login=true"
+            echo "autologin-guest=false"
         } >> "$DATA/lightdmconf"
-        cat "$BASE/rc/lightdmconf" > /etc/lightdm/lightdm.conf
-        cat "$BASE/rc/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+        cat "$DATA/lightdmconf" > /etc/lightdm/lightdm.conf
+        cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
     fi
 
     echo "LightDM: /etc/lightdm/ and /usr/share/lightdm/lightdm.conf.d/"
