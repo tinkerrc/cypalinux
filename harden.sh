@@ -2,7 +2,7 @@
 set -u
 
 #   ==================================
-#   | CyPa Hardening Script (Team 1) |
+#   |     Linux Hardening Script     |
 #   | Walnut HS Cyber Security Club  |
 #   ==================================
 
@@ -90,10 +90,8 @@ section-common() {
 }
 section-regular() {
     do-task inspect-svc
-    do-task cfg-apache
+    do-task cfg-lamp
     do-task cfg-ftp
-    do-task cfg-php
-    do-task cfg-mysql
     do-task inspect-www
     do-task inspect-cron
     do-task inspect-ports
@@ -354,9 +352,10 @@ fix-file-perms() {
     echo "Inspection complete"
 }
 fast-audit-pkgs() {
-    apt -my --ignore-missing purge hydra* nmap zenmap john* bind9 netcat* build-essential
+    apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* build-essential
     apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip nikto*
-    apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk
+    apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins
+    auditctl -w /etc/shadow -k shadow-file -p rwxa
     apt autoremove -y
 }
 
@@ -404,8 +403,8 @@ cfg-dm() {
         echo "greeter-hide-users=true"
         echo "greeter-show-manual-login=true"
     } >> "$DATA/lightdmconf"
-    cat "$DATA/lightdmconf" > /etc/lightdm/lightdm.conf
-    cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+    cat "$BASE/rc/lightdmconf" > /etc/lightdm/lightdm.conf
+    cat "$BASE/rc/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
 
     echo "Ubuntu 14: /etc/lightdm/"
     echo "Ubuntu 16: /usr/share/lightdm/lightdm.conf.d/"
@@ -440,13 +439,6 @@ audit-pkgs() {
     if (which software-properties-gtk &>/dev/null); then
         todo Launch software-properties-gtk
     fi
-    read -n 1 -rp "Remove apache2? [yN] "
-    if [[ $REPLY = "y" ]]; then
-        echo "Removing apache2..."
-        apt -my purge apache2
-    else
-        echo "Will not remove apache2."
-    fi
 
     read -n 1 -rp "Remove samba? [yN] "
     if [[ $REPLY = "y" ]]; then
@@ -456,12 +448,12 @@ audit-pkgs() {
         echo "Will not remove samba."
     fi
 
-    read -n 1 -rp "Remove vsftpd? [yN] "
+    read -n 1 -rp "Remove bind9? [yN] "
     if [[ $REPLY = "y" ]]; then
         echo "Removing vsftpd..."
         apt -my purge vsftpd
     else
-        echo "Will not remove vsftpd"
+        echo "Will not remove bind9"
     fi
 
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
@@ -485,31 +477,6 @@ inspect-svc() {
     ready "Inspect services and systemd units in /etc/systemd and /home/**/.config/systemd"
     bash
 }
-cfg-apache() {
-    echo "Securing apache2 config"
-    if [ -f /etc/apache2/apache2.conf ]; then
-        {
-            echo "<Directory />"
-            echo "        AllowOverride None"
-            echo "        Order Deny,Allow"
-            echo "        Deny from all"
-            echo "</Directory>"
-            echo "UserDir disabled root"
-        } >> /etc/apache2/apache2.conf
-        ufw allow http
-        ufw allow https
-        echo "Successfully configured Apache2"
-
-        ready "Inspect config"
-        vim /etc/apache2/apache2.conf
-
-        echo "Restarting apache2"
-        systemctl restart apache2 || service apache2 restart || echo "Failed to restart Apache2"
-    else
-        echo "No apache2 config found"
-    fi
-    echo "Done"
-}
 cfg-ftp() {
     read -n 1 -rp "Is Pure-FTPD a critical service? [Yn]"
     if [[ $REPLY =~ ^[Nn]$ ]]; then
@@ -519,7 +486,7 @@ cfg-ftp() {
         echo "Installing Pure-FTPD"
         apt install -y pure-ftpd
 
-        mv /etc/pure-ftpd/conf{,.bak} -n &>/dev/null
+        cp /etc/pure-ftpd/conf{,.bak}
         rm -rf /etc/pure-ftpd/conf
         cat "$BASE/rc/pure-ftpd.conf" > /etc/pure-ftpd/pure-ftpd.conf
 
@@ -539,8 +506,8 @@ cfg-ftp() {
         if ! [ -f /etc/ssl/private/pure-ftpd.pem ]; then
             mkdir -p /etc/ssl/private
             sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem
-            chmod 600 /etc/ssl/private/pure-ftpd.pem
         fi
+        chmod 600 /etc/ssl/private/pure-ftpd.pem
 
         systemctl restart pure-ftpd
     fi
@@ -558,8 +525,8 @@ cfg-ftp() {
         if ! [ -f /etc/ssl/private/vsftpd.key ]; then
             mkdir -p /etc/ssl/private
             openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/vsftpd.key -out /etc/ssl/certs/vsftpd.crt
-            chmod 600 /etc/ssl/private/vsftpd.key
         fi
+        chmod 600 /etc/ssl/private/vsftpd.key
 
         systemctl restart vsftpd
     fi
@@ -571,48 +538,115 @@ cfg-ftp() {
     else
         apt install -y proftpd
 
-        cp /etc/proftpd/proftpd.conf{,bak}
+        cp /etc/proftpd/proftpd.conf{,.bak}
         cat "$BASE/rc/proftpd.conf" > /etc/proftpd/proftpd.conf
         cat "$BASE/rc/tls.conf" > /etc/proftpd/tls.conf
 
         if ! [ -f /etc/ssl/private/proftpd.key ]; then
             mkdir -p /etc/ssl/private
             openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/proftpd.key -out /etc/ssl/certs/proftpd.crt
-            chmod 600 /etc/ssl/private/proftpd.key
         fi
+        chmod 600 /etc/ssl/private/proftpd.key
 
         systemctl restart proftpd
         todo "Check /etc/proftpd/conf.d for conflicting configurations"
     fi
 }
-cfg-php() {
-    echo "--PHP configuration--"
-    if which php &>/dev/null; then
-        read -rp "Enter php config location (hint: php --ini): " PHPCONF
-        ready "Inspect PHP config (original | suggested)"
-        vim -O "$PHPCONF" "$BASE/rc/php.ini"
+cfg-lamp() {
+    read -n1 -rp "Is LAMP necessary? [ynA]"
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        apt purge -y mysql-server
+        apt install -y wordpress apache2 libapache2-mod{security,-evasive,-php} mysql-server php{,-mysql,-cli,-cgi,-gd}
+        cfg-apache
+        cfg-mysql
+        cfg-php
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        apt autoremove --purge -y php* mysql* apache2* libapache2* wordpress*
     else
-        echo "PHP not found. No actions necessary."
+        echo "No actions taken"
     fi
+}
+cfg-apache() {
+    echo "Configuring apache2"
+    cp /etc/apache2/apache2.conf{,.bak}
+    cat "$BASE/rc/apache2.conf" > /etc/apache2/apache2.conf
+    cat "$BASE/rc/wordpress.conf" > /etc/apache2/sites-available/wordpress.conf
+    cat "$BASE/rc/security.conf" > /etc/apache2/conf-available/security.conf
+    ln -s /usr/share/wordpress /var/www/html/wordpress
+    a2enconf security
+    a2dissite 000-default
+    a2ensite wordpress
+    a2enmod rewrite security evasive
+    a2dismod -f include imap info userdir autoindex
+    ufw allow http
+    ufw allow https
+    echo "Restarting apache2"
+    systemctl reload apache2
+    echo "Done"
+
+    echo "Successfully configured Apache2"
+
+    ready "Compare original config with new"
+    vim -O /etc/apache2/apache2.conf{,.bak}
+
+    ready "Inspect config overrides"
+    cd /etc/apache2/
+    bash
+
+    ready "Inspect .htaccess (located in public directory)"
+    bash
+
+    ready "Inspect sites-available and sites-enabled"
+    cd /etc/apache2
+    bash
+
+    echo "Restarting apache2"
+    systemctl reload apache2
+    echo "Done"
 }
 cfg-mysql() {
     read -n1 -rp "Is MySQL a critical service? [ynA]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        apt install -y mysql-server
-        cp /etc/mysql/my.cnf "$BACKUP"
-        sed -i '/bind-address/ c\bind-address = 127.0.0.1' /etc/mysql/my.cnf
-        sed -i 's/skip-grant-tables.*//' /etc/mysql/my.cnf
+        ufw deny mysql
+        cp -r /etc/mysql "$BACKUP"
+        echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database" > /etc/mysql/mysql.conf.d/mysqld.cnf
+        echo -e "[mysql]\nlocal-infile=0" > /etc/mysql/conf.d/mysql.cnf
         systemctl restart mysql
-        todo "DROP USER ''@'localhost';"
-        todo "Check if mysql -uroot prompts for password"
+        grep -rn "skip-grant-tables" /etc/mysql
+        ready "Run mysql_secure_installation"
+        mysql_secure_installation
+        ready "remove occurrences of skip-grant-tables"
+        cd /etc/mysql
+        bash
         todo "add password to all users (incl. mysql & root)"
         todo "check if users have the right privileges"
-        ufw deny 3306
+        systemctl restart mysql
     elif [[ $REPLY =~ ^[Nn]$ ]]; then
         apt -my --ignore-missing purge mysql*
     else
         echo "No action taken"
     fi
+}
+cfg-php() {
+    cat "$BASE/rc/php.ini" > /etc/php/7.0/cli/php.ini
+    php --ini
+    ready "Look for extra PHP configurations"
+    bash
+}
+cfg-wordpress() {
+    gzip -d /usr/share/doc/wordpress/examples/setup-mysql.gz
+    bash /usr/share/doc/wordpress/examples/setup-mysql -n wordpress localhost
+    chown -R www-data:www-data /var/www/
+    chown -R www-data /usr/share/wordpress
+    find /var/www -type d -exec chmod 775 {} \;
+    find /usr/share/wordpress -type d -exec chmod 775 {} \;
+    systemctl restart apache2
+    todo "Go to http://localhost/wp-admin/install.php"
+    todo "Secure Wordpress (go to admin panel)"
+    ready "Look for insecure files in /usr/share/wordpress and /var/www/"
+    bash
+    ready "Try finding weird plugins"
+    bash
 }
 inspect-www() {
     if [ -d /var/www/html ]; then
@@ -813,7 +847,7 @@ run-linpeas() {
 av-scan() {
     echo "--AV Scans--"
     ready "Start chkrootkit scan"
-    chkrootkit
+    chkrootkit -q
 
     ready "Start rkhunter scan"
     rkhunter --update
@@ -822,5 +856,5 @@ av-scan() {
 
     ready "Start ClamAV scan"
     freshclam --stdout
-    clamscan -r -i --stdout --exclude-dir="^/sys" /
+    clamscan -r --bell -i --stdout --exclude-dir="^/sys" /
 }

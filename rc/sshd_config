@@ -13,13 +13,14 @@ LogLevel VERBOSE
 LoginGraceTime 120
 PermitRootLogin no
 StrictModes yes
-PubkeyAuthentication yes
+PubkeyAuthentication no
 IgnoreRhosts yes
+IgnoreUserKnownHosts yes
 RhostsRSAAuthentication no
 HostbasedAuthentication no
 PermitEmptyPasswords no
 ChallengeResponseAuthentication no
-PasswordAuthentication yes
+PasswordAuthentication no
 X11Forwarding no
 X11DisplayOffset 10
 PrintMotd no
@@ -36,3 +37,4 @@ AllowAgentForwarding no
 MaxSessions 2
 MaxAuthTries 3
 Compression no
+KerberosAuthentication no
