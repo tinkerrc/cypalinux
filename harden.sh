@@ -595,6 +595,7 @@ cfg-apache() {
     chmod -R 750 /var/cache/modsecurity
     ufw allow http
     ufw allow https
+    # TODO: use TLS
     echo "Restarting apache2"
     systemctl reload apache2
     echo "Done"
@@ -811,16 +812,14 @@ view-ps() {
     bash
 }
 suggestions() {
-    todo "View http://cypat.guru/index.php/Main_Page"
-    todo "in gdm3 greeter defaults config, disable-user-list=true"
     todo "check executables with find / -perm /4000 2>/dev/null"
-    todo "set apt settings see phone picture"
     todo "check /etc/skel and .bashrc"
     todo "check /etc/adduser.conf"
-    todo "generate ssh key"
+    todo "generate ssh keys"
+    todo "View http://cypat.guru/index.php/Main_Page"
+    todo "run https://github.com/openstack/ansible-hardening"
     todo "install scap workbench and scan the system"
     todo "run openvas"
-    todo "run https://github.com/openstack/ansible-hardening"
 }
 
 # ====================
