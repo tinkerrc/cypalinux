@@ -92,6 +92,8 @@ section-regular() {
     do-task inspect-svc
     do-task cfg-lamp
     do-task cfg-ftp
+    do-task cfg-bind9
+    do-task cfg-nginx
     do-task inspect-www
     do-task inspect-cron
     do-task inspect-ports
@@ -556,10 +558,11 @@ cfg-lamp() {
     read -n1 -rp "Is LAMP necessary? [ynA]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         apt purge -y mysql-server
-        apt install -y wordpress apache2 libapache2-mod{security,-evasive,-php} mysql-server php{,-mysql,-cli,-cgi,-gd}
+        apt install -y wordpress apache2 libapache2-mod-{security2,evasive,php} mysql-server php{,-mysql,-cli,-cgi,-gd}
         cfg-apache
         cfg-mysql
         cfg-php
+        cfg-wordpress
     elif [[ $REPLY =~ ^[Nn]$ ]]; then
         apt autoremove --purge -y php* mysql* apache2* libapache2* wordpress*
     else
@@ -572,12 +575,19 @@ cfg-apache() {
     cat "$BASE/rc/apache2.conf" > /etc/apache2/apache2.conf
     cat "$BASE/rc/wordpress.conf" > /etc/apache2/sites-available/wordpress.conf
     cat "$BASE/rc/security.conf" > /etc/apache2/conf-available/security.conf
+    cat "$BASE/rc/modsecurity.conf" > /etc/modsecurity/modsecurity.conf
+    cat "$BASE/rc/crs-setup.conf" > /usr/share/modsecurity-crs/crs-setup.conf
+    cat "$BASE/rc/security2.conf" > /etc/apache2/mods-available/security2.conf
+	chown root:root /etc/apache2
+	chmod 755 /etc/apache2
     ln -s /usr/share/wordpress /var/www/html/wordpress
     a2enconf security
     a2dissite 000-default
     a2ensite wordpress
-    a2enmod rewrite security evasive
+    a2enmod rewrite security2 evasive
     a2dismod -f include imap info userdir autoindex
+    mkdir -p /var/cache/modsecurity/uploads
+    chmod -R 750 /var/cache/modsecurity
     ufw allow http
     ufw allow https
     echo "Restarting apache2"
@@ -612,12 +622,15 @@ cfg-mysql() {
         echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database" > /etc/mysql/mysql.conf.d/mysqld.cnf
         echo -e "[mysql]\nlocal-infile=0" > /etc/mysql/conf.d/mysql.cnf
         systemctl restart mysql
+
         grep -rn "skip-grant-tables" /etc/mysql
-        ready "Run mysql_secure_installation"
-        mysql_secure_installation
         ready "remove occurrences of skip-grant-tables"
         cd /etc/mysql
         bash
+
+        ready "Run mysql_secure_installation"
+        mysql_secure_installation
+
         todo "add password to all users (incl. mysql & root)"
         todo "check if users have the right privileges"
         systemctl restart mysql
@@ -647,6 +660,12 @@ cfg-wordpress() {
     bash
     ready "Try finding weird plugins"
     bash
+}
+cfg-bind9() {
+    # TODO
+}
+cfg-nginx() {
+    # TODO
 }
 inspect-www() {
     if [ -d /var/www/html ]; then
@@ -787,11 +806,8 @@ suggestions() {
     todo "note: chage -d 0 to force reset password on next login"
     todo "consider adding a warning banner in /etc/issue.net (then add 'Banner issue.net' to sshd_config)"
     todo "in gdm3 greeter defaults config, disable-user-list=true"
-    todo "apache2 - add ModEvasive and ModSecurity modules"
     todo "check executables with find / -perm /4000 2>/dev/null"
     todo "set apt settings see phone picture"
-    todo "setup auditd?"
-    todo "malicious aliases?"
     todo "check /etc/skel and .bashrc"
     todo "check /etc/adduser.conf"
     todo "generate ssh key"

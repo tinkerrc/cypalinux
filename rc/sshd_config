@@ -38,3 +38,4 @@ MaxSessions 2
 MaxAuthTries 3
 Compression no
 KerberosAuthentication no
+PermitUserEnvironment no
