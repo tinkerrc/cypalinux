@@ -94,6 +94,7 @@ section-regular() {
     do-task cfg-ftp
     do-task cfg-bind9
     do-task cfg-nginx
+    do-task cfg-postgresql
     do-task inspect-www
     do-task inspect-cron
     do-task inspect-ports
@@ -376,6 +377,7 @@ user-audit() {
     sed "s/$/: password/" "$DATA/auth" | chpasswd
     awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
     python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/check" "$DATA/unauth"
+    todo "Note: chage -d 0 to force reset password on next login"
     echo "User audit complete"
 }
 inspect-passwd() {
@@ -393,24 +395,26 @@ inspect-group() {
     echo "/etc/group inspection complete"
 }
 cfg-dm() {
-    echo > "$DATA/lightdmconf" # clear file
-    while read -r line
-    do
-        if [[ ! $line =~ ^allow-guest=[a-z]+ ]]; then
-            echo "$line" >> "$DATA/lightdmconf"
-        fi
-    done < /etc/lightdm/lightdm.conf
-    {
-        echo "allow-guest=false"
-        echo "greeter-hide-users=true"
-        echo "greeter-show-manual-login=true"
-    } >> "$DATA/lightdmconf"
-    cat "$BASE/rc/lightdmconf" > /etc/lightdm/lightdm.conf
-    cat "$BASE/rc/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+    if [ -d /etc/lightdm ]; then
+        echo > "$DATA/lightdmconf" # clear file
+        while read -r line
+        do
+            if [[ ! $line =~ ^allow-guest=[a-z]+ ]]; then
+                echo "$line" >> "$DATA/lightdmconf"
+            fi
+        done < /etc/lightdm/lightdm.conf < /usr/share/lightdm/lightdm.conf < /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+        {
+            echo "[Seat:*]"
+            echo "allow-guest=false"
+            echo "greeter-hide-users=true"
+            echo "greeter-show-manual-login=true"
+        } >> "$DATA/lightdmconf"
+        cat "$BASE/rc/lightdmconf" > /etc/lightdm/lightdm.conf
+        cat "$BASE/rc/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+    fi
 
-    echo "Ubuntu 14: /etc/lightdm/"
-    echo "Ubuntu 16: /usr/share/lightdm/lightdm.conf.d/"
-    echo "Debian (GDM): /etc/gdm/gdm.conf"
+    echo "LightDM: /etc/lightdm/ and /usr/share/lightdm/lightdm.conf.d/"
+    echo "GDM: /etc/gdm/*, disable-user-list=true in greeter conf"
     ready "Inspect DM config"
     bash
 }
@@ -452,8 +456,8 @@ audit-pkgs() {
 
     read -n 1 -rp "Remove bind9? [yN] "
     if [[ $REPLY = "y" ]]; then
-        echo "Removing vsftpd..."
-        apt -my purge vsftpd
+        echo "Removing bind9..."
+        apt -my purge bind9*
     else
         echo "Will not remove bind9"
     fi
@@ -667,6 +671,9 @@ cfg-bind9() {
 cfg-nginx() {
     # TODO
 }
+cfg-postgresql() {
+    # TODO
+}
 inspect-www() {
     if [ -d /var/www/html ]; then
         ready "Inspect /var/www/html"
@@ -803,8 +810,7 @@ view-ps() {
     bash
 }
 suggestions() {
-    todo "note: chage -d 0 to force reset password on next login"
-    todo "consider adding a warning banner in /etc/issue.net (then add 'Banner issue.net' to sshd_config)"
+    todo "View http://cypat.guru/index.php/Main_Page"
     todo "in gdm3 greeter defaults config, disable-user-list=true"
     todo "check executables with find / -perm /4000 2>/dev/null"
     todo "set apt settings see phone picture"
