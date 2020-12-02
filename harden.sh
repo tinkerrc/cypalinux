@@ -169,6 +169,7 @@ install-apt-src() {
     else
         cat "$BASE/rc/sources.list.9" > /etc/apt/sources.list
     fi
+    apt-key update -y
     apt update -y
 }
 backup() {
@@ -357,9 +358,9 @@ fix-file-perms() {
 fast-audit-pkgs() {
     apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* build-essential
     apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip nikto*
-    apt install -y apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins
+    apt -y install apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins
     auditctl -w /etc/shadow -k shadow-file -p rwxa
-    apt autoremove -y
+    apt -y autoremove
 }
 
 # ====================
@@ -367,8 +368,8 @@ fast-audit-pkgs() {
 # ====================
 
 firefox-config() {
-    apt purge -y firefox &>/dev/null
-    apt install -y firefox
+    apt -y purge firefox &>/dev/null
+    apt -y install firefox
     todo "Configure Firefox"
 }
 user-audit() {
@@ -466,8 +467,8 @@ audit-pkgs() {
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
 
-    apt update -y
-    apt dist-upgrade -y
+    apt -y update
+    apt -y dist-upgrade
 }
 
 # ====================
