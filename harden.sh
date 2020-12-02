@@ -444,7 +444,7 @@ find-pw-text-files() {
 }
 audit-pkgs() {
     if (which software-properties-gtk &>/dev/null); then
-        todo Launch software-properties-gtk
+        todo "Launch software-properties-gtk (Software & Updates)"
     fi
 
     read -n 1 -rp "Remove samba? [yN] "
@@ -466,6 +466,7 @@ audit-pkgs() {
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
 
+    apt update -y
     apt dist-upgrade -y
 }
 
