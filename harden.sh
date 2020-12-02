@@ -669,12 +669,15 @@ cfg-wordpress() {
 }
 cfg-bind9() {
     # TODO
+    echo NI
 }
 cfg-nginx() {
     # TODO
+    echo NI
 }
 cfg-postgresql() {
     # TODO
+    echo NI
 }
 inspect-www() {
     if [ -d /var/www/html ]; then
