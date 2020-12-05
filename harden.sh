@@ -12,6 +12,11 @@ if [ ! "$(whoami)" = "root" ]; then
 fi
 
 if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
+    echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
+    echo "=> Data : $DATA"
+    echo "=> CWD  : $BASE"
+    echo "=> Log  : $DATA/log"
+    echo
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh' instead"
@@ -35,18 +40,15 @@ harden() {
     script -ac harden-impl "$DATA/log"
 }
 harden-impl() {
-    echo "=== $(date '+%Y-%m-%d %H:%M:%S %Z') ====================" >> "$DATA/log"
-    echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
-    echo "=> Data directory : $DATA"
-    echo "=> Base directory : $BASE"
-    echo "=> Output file    : $DATA/log"
-
-    ready "Run 'setxkbmap -option caps:swapescape' as a regular user"
-
+    echo "====| $(date '+%Y-%m-%d %H:%M:%S %Z') |====================>" >> "$DATA/log"
     if ! [ -d "$BASE/rc" ]; then
         echo "The resources directory is missing"
         exit 1
     fi
+
+    ready "Run 'setxkbmap -option caps:swapescape' as a regular user (optional)"
+
+    basic-recon
 
     todo "Launch a root shell in another terminal in case something goes wrong"
     section-streamline
@@ -56,6 +58,33 @@ harden-impl() {
     echo "Done!"
 
     bash
+}
+
+pkgchk() {
+    if (dpkg-query -W -f='${Status}' $1 2>/dev/null | grep 'ok installed' &>/dev/null); then
+        echo "$1 is installed"
+        if [ "$2" != "" ]; then
+            echo "$2 is $(systemctl is-active $2)"
+        fi
+    else
+        echo "$1 is NOT installed"
+    fi
+}
+
+basic-recon() {
+    pkgchk openssh-server sshd
+    pkgchk apache2 apache2
+    pkgchk mysql mysql
+    pkgchk php
+    pkgchk vsftpd vsftpd
+    pkgchk proftpd proftpd
+    pkgchk pure-ftpd pure-ftpd
+    if [ -d /var/www ]; then
+        echo "/var/www found"
+    else
+        echo "/var/www not found"
+    fi
+    todo "Read recon report above"
 }
 
 section-streamline() {
@@ -124,7 +153,9 @@ todo () {
 }
 ready() {
     # Wait for user to be ready
-    echo -e "\033[0;35;1;4mREADY:\033[0m $*"
+    if [ "$*" != "" ]; then
+        echo -e "\033[0;35;1;4mREADY:\033[0m $*"
+    fi
     read -n 1 -rp "Press [ENTER] when you are ready"
 }
 do-task() {
