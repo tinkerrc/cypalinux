@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -u
-
+# TODO: replace 'ready' with 'echo' if possible
+# TODO: prepare repo installation one-liner
 #   ==================================
 #   |     Linux Hardening Script     |
 #   | Walnut HS Cyber Security Club  |
@@ -8,19 +9,14 @@ set -u
 
 if [ ! "$(whoami)" = "root" ]; then
     echo "Please try again with root privileges..."
-    exit 1
+    return 1
 fi
 
 if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
-    echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
-    echo "=> Data : $DATA"
-    echo "=> CWD  : $BASE"
-    echo "=> Log  : $DATA/log"
-    echo
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh' instead"
-    exit 1
+    return 1
 fi
 
 set -a # export all functions and variables
@@ -29,6 +25,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/us
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
 DATA="/.harden"
 BACKUP="/backup"
+DEBIAN_FRONTEND=noninteractive
 mkdir -p $DATA
 mkdir -p $BACKUP
 
@@ -41,6 +38,7 @@ harden() {
 }
 harden-impl() {
     echo "====| $(date '+%Y-%m-%d %H:%M:%S %Z') |====================>" >> "$DATA/log"
+    echo "Walnut High School CSC CyberPatriot Linux Hardening Script"
     if ! [ -d "$BASE/rc" ]; then
         echo "The resources directory is missing"
         exit 1
@@ -279,14 +277,13 @@ rm-media-files() {
         grep -Ev '^(/usr|/var/lib)' | tee "$DATA/sus_files"
     echo "Media files in /home are quarantined in $BACKUP/quarantine (see $DATA/banned_files)."
     echo "Also check $DATA/sus_files"
+    # FIXME: shouldn't be in section-streamlined
     ready "You might want to look for additional media files and other disallowed files. Check /opt for example"
     bash
 }
 firewall() {
-    ready "Install ufw and iptables (check if other apt processes are running)"
     echo "Installing..."
     apt install -y ufw iptables
-    ready "Configure firewall"
     chmod 751 /lib/ufw
     ufw enable
     ufw logging high
@@ -306,6 +303,7 @@ firewall() {
         cp /etc/ufw/sysctl.conf "$BACKUP"
         sed 's:\.:/:g' "$BASE/rc/sysctl.conf" > /etc/ufw/sysctl.conf
     fi
+    # FIXME: not in streamlined
     ready "Further modify UFW settings according to README (e.g., ufw allow 80)"
     bash
 }
@@ -315,7 +313,6 @@ cfg-sysctl() {
     echo "/etc/sysctl.conf has been installed"
 }
 cfg-sudoer() {
-    ready "Press [ENTER] to launch visudo"
     cp /etc/sudoers{,.bak}
     cat "$BASE/rc/sudoers" > /etc/sudoers
     echo "Sudoers audit complete"
@@ -401,12 +398,15 @@ fast-audit-pkgs() {
 firefox-config() {
     apt -y purge firefox &>/dev/null
     apt -y install firefox
+    # TODO: add user.js (?)
     todo "Configure Firefox"
 }
 user-audit() {
     ready "Enter a list of authorized users"
     vim "$DATA/auth"
-    sed "s/$/: password/" "$DATA/auth" | chpasswd
+    sed "s/$/: Password123!/" "$DATA/auth" | chpasswd
+    # TODO: ask for autologin username and prevent pw change
+    # TODO: automate group fixing here and remove inspect-group
     awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
     python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/check" "$DATA/unauth"
     todo "Note: chage -d 0 to force reset password on next login"
@@ -448,7 +448,7 @@ cfg-dm() {
 
     echo "LightDM: /etc/lightdm/ and /usr/share/lightdm/lightdm.conf.d/"
     echo "GDM: /etc/gdm/*, disable-user-list=true in greeter conf"
-    ready "Inspect DM config"
+    ready "Inspect DM config" # TODO: automate
     bash
 }
 lock-root() {
@@ -471,6 +471,7 @@ chsh-root() {
     fi
 }
 find-pw-text-files() {
+    # TODO: automate; find password.*; grep -rn PASSWORD /home
     ready "Try to find, backup, and remove suspicious files (e.g., cd /home; grep -rwni P@a5w0rD)"
     bash
 }
@@ -478,6 +479,12 @@ audit-pkgs() {
     if (which software-properties-gtk &>/dev/null); then
         todo "Launch software-properties-gtk (Software & Updates)"
     fi
+
+    echo --- Manually Installed Packages Start ---
+    comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u)
+    echo ---  Manually Installed Packages End  ---
+    ready "Inspect and remove packages listed above if necessary"
+    bash
 
     read -n 1 -rp "Remove samba? [yN] "
     if [[ $REPLY = "y" ]]; then
@@ -498,6 +505,7 @@ audit-pkgs() {
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
 
+    # TODO: async OR just do it manually :)
     apt -y update
     apt -y dist-upgrade
 }
@@ -780,10 +788,10 @@ inspect-apt-src() {
     if ! (find /etc/apt/sources.list.d 2>/dev/null | grep / -q); then
         ready "Inspect APT sources.list.d"
         vim /etc/apt/sources.list.d/
+        echo "Updating APT sources..."
+        apt update -y
+        echo "Done"
     fi
-    echo "Updating APT sources..."
-    apt update -y
-    echo "Done"
 }
 inspect-file-attrs() {
     ready "Search for files with non-base ACL in /home, /etc, and /var"
@@ -876,7 +884,7 @@ run-lynis() {
     cd lynis
     clear
     ready "Start lynis"
-    ./lynis audit system
+    ./lynis audit system --quiet
     ready "Take action in bash; run lynis under other modes if necessary"
     bash
 }
