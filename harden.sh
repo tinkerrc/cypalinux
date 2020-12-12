@@ -65,7 +65,6 @@ harden-impl() {
 pkgchk() {
     if (dpkg-query -W -f='${Status}' $1 2>/dev/null | grep 'ok installed' &>/dev/null); then
         if [[ "$2" != "" ]]; then
-            echo "\033[0;35;1;4mREADY:\033[0m $*"
             echo -e "\033[0;35;1;4m>>> $1 is INSTALLED and $2 is $(systemctl is-active $2 2>/dev/null)\033[0m"
         else
             echo "$1 is INSTALLED"
