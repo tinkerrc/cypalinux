@@ -32,8 +32,7 @@ with open(unauthed_file, "w") as f:
                 f.write(user + "\n")
                 print("User '" + user + "' (" + uid + ") removed")
                 continue
-            else:
-                print("User '" + user + "' (" + uid + ") not removed")
+            print("User '" + user + "' (" + uid + ") not removed")
         subprocess.call(['chage', '--maxdays', '90', user])
         subprocess.call(['chage', '--mindays', '7', user])
         subprocess.call(['chage', '--warndays', '7', user])

@@ -21,11 +21,15 @@ set -a # export all functions and variables
 unalias -a
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
-DATA="/.harden"
+DATA="$BASE/flags"
 BACKUP="/backup"
 DEBIAN_FRONTEND=noninteractive
 mkdir -p $DATA
 mkdir -p $BACKUP
+if [[ -L /root/.bash_history ]]; then
+    unlink /root/.bash_history
+    echo '' > /root/.bash_history
+fi
 
 # ===================================
 # Main functions
@@ -44,13 +48,15 @@ harden-impl() {
 
     ready "Run 'setxkbmap -option caps:swapescape' as a regular user (optional)"
 
-    basic-recon
+    basic-recon | tee "$BASE/recon"
 
     todo "Launch a root shell in another terminal in case something goes wrong"
     section-streamline
     section-common
     section-regular
     section-rare
+
+    apt autoremove
     echo "Done!"
 
     bash
@@ -58,9 +64,11 @@ harden-impl() {
 
 pkgchk() {
     if (dpkg-query -W -f='${Status}' $1 2>/dev/null | grep 'ok installed' &>/dev/null); then
-        echo "$1 is installed"
-        if [ "$2" != "" ]; then
-            echo "$2 is $(systemctl is-active $2)"
+        if [[ "$2" != "" ]]; then
+            echo "\033[0;35;1;4mREADY:\033[0m $*"
+            echo -e "\033[0;35;1;4m>>> $1 is INSTALLED and $2 is $(systemctl is-active $2 2>/dev/null)\033[0m"
+        else
+            echo "$1 is INSTALLED"
         fi
     else
         echo "$1 is NOT installed"
@@ -77,12 +85,14 @@ basic-recon() {
     pkgchk pure-ftpd pure-ftpd
     pkgchk samba smbd
     pkgchk bind9 named
+    pkgchk nginx nginx
+    pkgchk postgresql postgresql
     if [ -d /var/www ]; then
         echo "/var/www found"
     else
         echo "/var/www not found"
     fi
-    todo "Read recon report above"
+    todo "Read recon report above (also in $BASE/recon)"
 }
 
 section-streamline() {
@@ -316,12 +326,12 @@ fast-audit-fs() {
     mkdir -p "$BACKUP/quarantine"
     locate -0 -i --regex \
         "^/home/.*\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
-        tee "$DATA/banned_files" | xargs -0 -t mv -t "$BACKUP/quarantine" || echo "Couldn't remove files"
+        tee "$BASE/banned_files" | xargs -0 -t mv -t "$BACKUP/quarantine" || echo "Couldn't remove files"
     locate -0 -i --regex \
         "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
-        grep -Ev '^(/usr|/var/lib)' | tee "$DATA/sus_files"
-    echo "Media files in /home are quarantined in $BACKUP/quarantine (see $DATA/banned_files)."
-    echo "Also check $DATA/sus_files"
+        grep -Ev '^(/usr|/var/lib)' | tee "$BASE/sus_files"
+    echo "Media files in /home are quarantined in $BACKUP/quarantine (see $BASE/banned_files)."
+    echo "Also check $BASE/sus_files"
     sleep 2
 }
 firewall() {
@@ -543,6 +553,7 @@ find-pw-text-files() {
     bash
 }
 audit-fs() {
+    ls /home/*
     ready "Look for suspicious files"
     bash
 }
@@ -552,16 +563,13 @@ audit-pkgs() {
     fi
     dpkg-reconfigure postfix
     echo '--- Manually Installed Packages Start ---'
-    comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u)
+    comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u) | tee "$BASE/manually-installed"
     echo '---  Manually Installed Packages End  ---'
     echo
     echo '---      Non-base packages Start      ---'
-    apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt"
+    apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt" | tee "$BASE/nonbase-pkgs"
     echo '---       Non-base packages End       ---'
-    ready "Inspect and remove packages listed above if necessary"
-    bash
-
-    ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
+    ready "Inspect and remove packages listed above if necessary (see $BASE/manually-installed and $BASE/nonbase-pkgs)"
     bash
 
     # TODO: async OR just do it manually :)
@@ -673,7 +681,7 @@ cfg-ftp() {
 }
 cfg-lamp() {
     ufw deny mysql
-    read -n1 -rp "Is LAMP necessary? [ynA]"
+    read -n1 -rp "Is LAMP necessary? [ynI]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         apt purge -y mysql-server
         apt install -y wordpress apache2 libapache2-mod-{security2,evasive,php} mysql-server php{,-mysql,-cli,-cgi,-gd}
@@ -737,7 +745,7 @@ cfg-apache() {
     echo "Done"
 }
 cfg-mysql() {
-    read -n1 -rp "Is MySQL a critical service? [ynA]"
+    read -n1 -rp "Is MySQL a critical service? [ynI]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         cp -r /etc/mysql "$BACKUP"
         echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database" > /etc/mysql/mysql.conf.d/mysqld.cnf
@@ -783,13 +791,20 @@ cfg-wordpress() {
     bash
 }
 cfg-bind9() {
-    read -n 1 -rp "Is bind9 a critical service? [yN] "
+    read -n 1 -rp "Is bind9 a critical service? [ynI] "
     if [[ $REPLY ~= ^[Yy]$ ]]; then
         # TODO
         echo NI
-        sed -i 's/^.*version\s+".*";.*/version "NS";/' /etc/named.conf
-        sed -i 's/^.*allow-transfer\s+.*;.*/allow-transfer {"none";};/' /etc/named.conf
-    elif [[ $REPLY ~= ^[Yy]$ ]]; then
+        apt install -y bind9
+        sed -i 's/^.*version\s+".*";.*/version none;/' /etc/bind/named.conf.options
+        sed -i 's/^.*allow-transfer.*;.*/allow-transfer {none;};/' /etc/bind/named.conf.options
+        echo "Note: see https://wiki.debian.org/Bind9"
+        ready "Configure bind9 (/etc/bind/...)"
+
+        cd /etc/bind/ &>/dev/null || cd /etc || true
+        bash
+    elif [[ $REPLY ~= ^[Nn]$ ]]; then
+        disnow named
         apt -my purge bind9*
     else
         echo "Will not remove bind9"
@@ -797,15 +812,39 @@ cfg-bind9() {
 
 }
 cfg-nginx() {
-    # TODO
-    echo NI
+    read -n 1 -rp "Is nginx a critical service? [ynI] "
+    if [[ $REPLY ~= ^[Yy]$ ]]; then
+        # TODO
+        echo NI
+        apt install -y nginx
+        ready "Configure nginx"
+        cd /etc/nginx || cd /etc
+        bash
+    elif [[ $REPLY ~= ^[Nn]$ ]]; then
+        disnow nginx
+        apt -my purge nginx*
+    else
+        echo "Will not remove nginx"
+    fi
 }
 cfg-postgresql() {
-    # TODO
-    echo NI
+    read -n1 -rp "Is postgresql a critical service? [ynI] "
+    if [[ $REPLY ~= ^[Yy]$ ]]; then
+        # TODO
+        echo NI
+        apt install -y postgresql{,-contrib}
+        ready "Configure postgresql (/etc/postgresql/VERSION/...)"
+        cd /etc/postgresql
+        bash
+    elif [[ $REPLY ~= ^[Nn]$ ]]; then
+        disnow postgresql
+        apt -my purge postgresql
+    else
+        echo "Will not remove postgresql"
+    fi
 }
 cfg-samba() {
-    read -n1 -rp "Is Samba necessary? [ynA]"
+    read -n1 -rp "Is Samba a critical service? [ynI]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         apt install samba libpam-winbind
         sed -i 's/^.*guest ok.*$/    guest ok = no/' /etc/samba/smb.conf
