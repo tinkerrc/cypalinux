@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 set -u
-# TODO: replace 'ready' with 'echo' if possible
-# TODO: prepare repo installation one-liner
 #   ==================================
 #   |     Linux Hardening Script     |
 #   | Walnut HS Cyber Security Club  |
@@ -77,6 +75,8 @@ basic-recon() {
     pkgchk vsftpd vsftpd
     pkgchk proftpd proftpd
     pkgchk pure-ftpd pure-ftpd
+    pkgchk samba smbd
+    pkgchk bind9 named
     if [ -d /var/www ]; then
         echo "/var/www found"
     else
@@ -90,17 +90,19 @@ section-streamline() {
     backup
     ensure-vim
     ensure-python3
+    fast-cfg-dm
     cfg-unattended-upgrades
     cfg-sshd
-    rm-media-files
+    fast-audit-fs
     firewall
-    cfg-sysctl
+    cfg-sys
     cfg-sudoer
     cfg-common
     cfg-fail2ban
     restrict-cron
     fix-file-perms
     fast-audit-pkgs
+    cfg-auditd
 }
 section-common() {
     todo "Read the README before proceeding"
@@ -113,6 +115,7 @@ section-common() {
     lock-root
     chsh-root
     do-task find-pw-text-files
+    do-task audit-fs
     do-task audit-pkgs
 }
 section-regular() {
@@ -122,6 +125,7 @@ section-regular() {
     do-task cfg-bind9
     do-task cfg-nginx
     do-task cfg-postgresql
+    do-task cfg-samba
     do-task inspect-www
     do-task inspect-cron
     do-task inspect-ports
@@ -154,7 +158,9 @@ ready() {
     if [ "$*" != "" ]; then
         echo -e "\033[0;35;1;4mREADY:\033[0m $*"
     fi
-    read -n 1 -rp "Press [ENTER] when you are ready"
+    sleep 0.75
+    # NOTE: disabled read
+    #read -n 1 -rp "Press [ENTER] when you are ready"
 }
 do-task() {
     # in case the script is stopped midway
@@ -169,11 +175,13 @@ do-task() {
     eval "$@"
     echo
     echo "Tip: Don't forget to record scoring reports and take notes!"
-    read -p "Done with the task? [yN] " -n 1 -r
-    echo; echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # read -p "Done with the task? [yN] " -n 1 -r
+    # echo; echo
+    # if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # NOTE: assumed yes
+        sleep 0.3
         touch "$DATA/$1"
-    fi
+    # fi
 }
 restart-sshd() {
     echo "Restarting sshd"
@@ -234,6 +242,40 @@ ensure-python3() {
         echo "Python3 is installed."
     fi
 }
+fast-cfg-dm() {
+    if [ -d /etc/lightdm ]; then
+        echo > "$DATA/lightdmconf" # clear file
+        while read -r line
+        do
+            if [[ ! $line =~ ^allow-guest=[a-z]+ ]]; then
+                echo "$line" >> "$DATA/lightdmconf"
+            fi
+        done < <(cat /etc/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf 2>/dev/null)
+        {
+            echo "[Seat:*]"
+            echo "allow-guest=false"
+            echo "greeter-hide-users=true"
+            echo "greeter-show-manual-login=true"
+            echo "autologin-guest=false"
+        } >> "$DATA/lightdmconf"
+        cat "$DATA/lightdmconf" > /etc/lightdm/lightdm.conf
+        cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+    fi
+    sed -i 's/^.*disable-user-list.*$/disable-user-list=true/' /etc/gdm3/greeter.dconf-defaults
+    cat <<EOF > /etc/dconf/profile/gdm
+user-db:user
+system-db:gdm
+file-db:/usr/share/gdm/greeter-dconf-defaults
+EOF
+
+    cat <<EOF > /etc/dconf/db/gdm.d/00-login-screen
+[org/gnome/login-screen]
+# Do not show the user list
+disable-user-list=true
+EOF
+
+    dconf update
+}
 cfg-unattended-upgrades() {
     echo "Installing unattended-upgrades..."
     apt install -y unattended-upgrades
@@ -255,7 +297,10 @@ cfg-sshd() {
     restart-sshd
     echo "New sshd_config applied"
 }
-rm-media-files() {
+fast-audit-fs() {
+    rm -f /home/*/.netrc
+    rm -f /home/*/.forward
+    rm -f /home/*/.rhosts
     if ! (which locate &>/dev/null); then
         echo "Installing locate utility"
         apt install -y mlocate findutils
@@ -266,7 +311,7 @@ rm-media-files() {
 
     if ! [ -d "$BACKUP/home" ]; then
         echo "Warning: backup for home not found"
-        ready -n 1 -rp "Press [ENTER] to continue"
+        read -n 1 -rp "Press [ENTER] to continue"
     fi
     mkdir -p "$BACKUP/quarantine"
     locate -0 -i --regex \
@@ -277,9 +322,7 @@ rm-media-files() {
         grep -Ev '^(/usr|/var/lib)' | tee "$DATA/sus_files"
     echo "Media files in /home are quarantined in $BACKUP/quarantine (see $DATA/banned_files)."
     echo "Also check $DATA/sus_files"
-    # FIXME: shouldn't be in section-streamlined
-    ready "You might want to look for additional media files and other disallowed files. Check /opt for example"
-    bash
+    sleep 2
 }
 firewall() {
     echo "Installing..."
@@ -303,13 +346,13 @@ firewall() {
         cp /etc/ufw/sysctl.conf "$BACKUP"
         sed 's:\.:/:g' "$BASE/rc/sysctl.conf" > /etc/ufw/sysctl.conf
     fi
-    # FIXME: not in streamlined
-    ready "Further modify UFW settings according to README (e.g., ufw allow 80)"
-    bash
 }
-cfg-sysctl() {
+cfg-sys() {
     cat "$BASE/rc/sysctl.conf" > /etc/sysctl.conf
     sysctl -e -p /etc/sysctl.conf
+    grep "hard core" /etc/security/limits.conf /etc/security/limits.d/*
+    sed -i 's/.*hard core.*//' /etc/security/limits.conf
+    echo '* hard core 0' > /etc/security/limits.conf
     echo "/etc/sysctl.conf has been installed"
 }
 cfg-sudoer() {
@@ -319,7 +362,7 @@ cfg-sudoer() {
 }
 cfg-common() {
     echo "Installing configuration files..."
-    apt install -y libpam-cracklib
+    apt install -y libpam-cracklib libpam-pwquality
     cat "$BASE/rc/common-password" > /etc/pam.d/common-password
     cat "$BASE/rc/common-auth" > /etc/pam.d/common-auth
     cat "$BASE/rc/common-account" > /etc/pam.d/common-account
@@ -327,6 +370,7 @@ cfg-common() {
     cat "$BASE/rc/common-session-noninteractive" > /etc/pam.d/common-session-noninteractive
     cat "$BASE/rc/login.defs" > /etc/login.defs
     cat "$BASE/rc/host.conf" > /etc/host.conf
+    cat "$BASE/rc/pwquality.conf" > /etc/security/pwquality.conf
     echo "PAM config, login.defs, and host.conf have been installed"
 }
 cfg-fail2ban() {
@@ -342,6 +386,7 @@ restrict-cron() {
     echo "root" > /etc/cron.allow
     echo "root" > /etc/at.allow
     chmod 644 /etc/{cron,at}.allow
+    systemctl restart cron
     echo "Done!"
 }
 fix-file-perms() {
@@ -349,12 +394,20 @@ fix-file-perms() {
     chmod 751 /
     chmod 644 /etc/passwd
     chown root:root /etc/passwd
+    chmod 644 /etc/passwd-
+    chown root:root /etc/passwd-
     chmod 644 /etc/group
     chown root:root /etc/group
+    chmod 644 /etc/group-
+    chown root:root /etc/group-
     chmod 600 /etc/shadow
     chown root:root /etc/shadow
+    chmod 600 /etc/shadow-
+    chown root:root /etc/shadow-
     chmod 600 /etc/gshadow
     chown root:root /etc/gshadow
+    chmod 600 /etc/gshadow-
+    chown root:root /etc/gshadow-
     chmod 640 /etc/anacrontab
     chown root:root /etc/anacrontab
     chmod 640 /etc/crontab
@@ -383,12 +436,30 @@ fix-file-perms() {
     echo "Secured home and .ssh/* permissions"
     echo "Inspection complete"
 }
+disnow() {
+    systemctl disable --now $1
+}
 fast-audit-pkgs() {
+    disnow avahi-daemon
+    disnow cups
+    disnow nfs-server
+    disnow rpcbind
+    disnow dovecot
+    disnow squid
+    disnow nis
+    prelink -ua
     apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* build-essential
     apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip nikto*
-    apt -y install apparmor apparmor-profiles clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins
+    apt -my --ignore-missing purge prelink nfs-* portmap squid rsync nis rsh-* talk telnet ldap-*
+    apt -y install apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp chrony
     auditctl -w /etc/shadow -k shadow-file -p rwxa
+    aideinit
     apt -y autoremove
+}
+cfg-auditd() {
+    mkdir -p /etc/audit
+    cat "$BASE/rc/audit.rules" > /etc/audit/audit.rules
+    systemctl reload auditd
 }
 
 # ====================
@@ -399,9 +470,11 @@ firefox-config() {
     apt -y purge firefox &>/dev/null
     apt -y install firefox
     # TODO: add user.js (?)
-    todo "Configure Firefox"
+
+    todo "Configure Firefox; remember to set as default browser"
 }
 user-audit() {
+    usermod -g 0 root
     ready "Enter a list of authorized users"
     vim "$DATA/auth"
     sed "s/$/: Password123!/" "$DATA/auth" | chpasswd
@@ -409,7 +482,14 @@ user-audit() {
     # TODO: automate group fixing here and remove inspect-group
     awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
     python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/check" "$DATA/unauth"
-    todo "Note: chage -d 0 to force reset password on next login"
+    for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do
+        if [ $user != "root" ]; then
+            usermod -L $user
+            if [ $user != "sync" ] && [ $user != "shutdown" ] && [ $user != "halt" ]; then
+                usermod -s /usr/sbin/nologin $user
+            fi
+        fi
+    done
     echo "User audit complete"
 }
 inspect-passwd() {
@@ -422,33 +502,16 @@ inspect-group() {
     # TODO: set sudo users automatically
     grep adm /etc/group
     grep sudo /etc/group
+    echo "sudo,adm,admin,wheel"
     ready "Inspect groups"
     vim /etc/group
     echo "/etc/group inspection complete"
 }
 cfg-dm() {
-    if [ -d /etc/lightdm ]; then
-        echo > "$DATA/lightdmconf" # clear file
-        while read -r line
-        do
-            if [[ ! $line =~ ^allow-guest=[a-z]+ ]]; then
-                echo "$line" >> "$DATA/lightdmconf"
-            fi
-        done < <(cat /etc/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf 2>/dev/null)
-        {
-            echo "[Seat:*]"
-            echo "allow-guest=false"
-            echo "greeter-hide-users=true"
-            echo "greeter-show-manual-login=true"
-            echo "autologin-guest=false"
-        } >> "$DATA/lightdmconf"
-        cat "$DATA/lightdmconf" > /etc/lightdm/lightdm.conf
-        cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
-    fi
-
     echo "LightDM: /etc/lightdm/ and /usr/share/lightdm/lightdm.conf.d/"
     echo "GDM: /etc/gdm/*, disable-user-list=true in greeter conf"
     ready "Inspect DM config" # TODO: automate
+    echo "Note: currently using $(grep '/usr/s\?bin' /etc/systemd/system/display-manager.service | cut -d= -f2 | cut -d/ -f4)"
     bash
 }
 lock-root() {
@@ -472,35 +535,31 @@ chsh-root() {
 }
 find-pw-text-files() {
     # TODO: automate; find password.*; grep -rn PASSWORD /home
-    ready "Try to find, backup, and remove suspicious files (e.g., cd /home; grep -rwni P@a5w0rD)"
+    echo '--- Potential Password Files Start ---'
+    find /home -name "*pass*"
+    find /home -name "*pw*"
+    echo '---  Potential Password Files End  ---'
+    ready "Try to find and quarantine (e.g., cd /home; grep -rwni P@a5w0rD)"
+    bash
+}
+audit-fs() {
+    ready "Look for suspicious files"
     bash
 }
 audit-pkgs() {
     if (which software-properties-gtk &>/dev/null); then
         todo "Launch software-properties-gtk (Software & Updates)"
     fi
-
-    echo --- Manually Installed Packages Start ---
+    dpkg-reconfigure postfix
+    echo '--- Manually Installed Packages Start ---'
     comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u)
-    echo ---  Manually Installed Packages End  ---
+    echo '---  Manually Installed Packages End  ---'
+    echo
+    echo '---      Non-base packages Start      ---'
+    apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt"
+    echo '---       Non-base packages End       ---'
     ready "Inspect and remove packages listed above if necessary"
     bash
-
-    read -n 1 -rp "Remove samba? [yN] "
-    if [[ $REPLY = "y" ]]; then
-        echo "Removing samba..."
-        apt -my purge samba*
-    else
-        echo "Will not remove samba."
-    fi
-
-    read -n 1 -rp "Remove bind9? [yN] "
-    if [[ $REPLY = "y" ]]; then
-        echo "Removing bind9..."
-        apt -my purge bind9*
-    else
-        echo "Will not remove bind9"
-    fi
 
     ready "Look for any disallowed or unnecessary package (e.g., mysql postgresql nginx php)"
     bash
@@ -516,7 +575,7 @@ audit-pkgs() {
 
 inspect-svc() {
     echo "Inspect services"
-    if ! which service &>/dev/null; then
+    if which service &>/dev/null; then
         echo " [+] : running"
         echo " [-] : stopped"
         echo " [?] : upstart service / status unsupported"
@@ -530,7 +589,11 @@ cfg-ftp() {
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         echo "Removing Pure-FTPD"
         apt autoremove -y --purge pure-ftpd
+        ufw deny ftp
+        ufw deny ftps
     else
+        ufw allow ftp
+        ufw allow ftps
         echo "Installing Pure-FTPD"
         apt install -y pure-ftpd
 
@@ -564,7 +627,11 @@ cfg-ftp() {
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         echo "Removing VSFTPD"
         apt autoremove --purge vsftpd
+        ufw deny ftp
+        ufw deny ftps
     else
+        ufw allow ftp
+        ufw allow ftps
         apt install -y vsftpd
 
         cp /etc/vsftpd.conf{,.bak}
@@ -583,7 +650,11 @@ cfg-ftp() {
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         echo "Removing Pro-FTPD"
         apt autoremove --purge proftpd
+        ufw deny ftp
+        ufw deny ftps
     else
+        ufw allow ftp
+        ufw allow ftps
         apt install -y proftpd
 
         cp /etc/proftpd/proftpd.conf{,.bak}
@@ -601,6 +672,7 @@ cfg-ftp() {
     fi
 }
 cfg-lamp() {
+    ufw deny mysql
     read -n1 -rp "Is LAMP necessary? [ynA]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         apt purge -y mysql-server
@@ -610,7 +682,10 @@ cfg-lamp() {
         cfg-php
         cfg-wordpress
     elif [[ $REPLY =~ ^[Nn]$ ]]; then
-        apt autoremove --purge -y php* mysql* apache2* libapache2* wordpress*
+        ufw deny http
+        ufw deny https
+        apt --ignore-missing autoremove --purge -y php* mysql* apache2* libapache2* wordpress*
+        rm -rf /var/www/*
     else
         echo "No actions taken"
     fi
@@ -643,7 +718,7 @@ cfg-apache() {
 
     echo "Successfully configured Apache2"
 
-    ready "Compare original config with new"
+    ready "Compare original config with new, also disable /server-status if exists"
     vim -O /etc/apache2/apache2.conf{,.bak}
 
     ready "Inspect config overrides"
@@ -664,7 +739,6 @@ cfg-apache() {
 cfg-mysql() {
     read -n1 -rp "Is MySQL a critical service? [ynA]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        ufw deny mysql
         cp -r /etc/mysql "$BACKUP"
         echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database" > /etc/mysql/mysql.conf.d/mysqld.cnf
         echo -e "[mysql]\nlocal-infile=0" > /etc/mysql/conf.d/mysql.cnf
@@ -709,8 +783,18 @@ cfg-wordpress() {
     bash
 }
 cfg-bind9() {
-    # TODO
-    echo NI
+    read -n 1 -rp "Is bind9 a critical service? [yN] "
+    if [[ $REPLY ~= ^[Yy]$ ]]; then
+        # TODO
+        echo NI
+        sed -i 's/^.*version\s+".*";.*/version "NS";/' /etc/named.conf
+        sed -i 's/^.*allow-transfer\s+.*;.*/allow-transfer {"none";};/' /etc/named.conf
+    elif [[ $REPLY ~= ^[Yy]$ ]]; then
+        apt -my purge bind9*
+    else
+        echo "Will not remove bind9"
+    fi
+
 }
 cfg-nginx() {
     # TODO
@@ -720,10 +804,45 @@ cfg-postgresql() {
     # TODO
     echo NI
 }
+cfg-samba() {
+    read -n1 -rp "Is Samba necessary? [ynA]"
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        apt install samba libpam-winbind
+        sed -i 's/^.*guest ok.*$/    guest ok = no/' /etc/samba/smb.conf
+        sed -i 's/^.*usershare allow guests.*$/usershare allow guests = no/' /etc/samba/smb.conf
+        mkdir -p /etc/apparmor.d
+        cat <<EOF > /etc/apparmor.d/usr.sbin.smbd
+  /srv/samba/share/ r,
+  /srv/samba/share/** rwkix,
+EOF
+        aa-enforce /usr/sbin/smbd
+        cat /etc/apparmor.d/usr.sbin.smbd | apparmor_parser -r
+        todo "Check admin users of share"
+        echo "Note: config file is /etc/samba/smb.conf"
+        todo "In [global] section add: restrict anonymous = 2"
+        cat <<EOF
+[ipc$]
+hosts allow = 127.0.0.1
+hosts deny = 0.0.0.0/0
+guest ok = no
+browseable = no
+EOF
+        todo "Replace ipc$ share with above"
+        systemctl restart smbd.service nmbd.service
+
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        echo "Removing samba"
+        systemctl disable --now smbd.service nmbd.service
+        apt -my purge samba*
+    else
+        echo "No actions taken"
+    fi
+}
 inspect-www() {
     if [ -d /var/www/html ]; then
         ready "Inspect /var/www/html"
         cd /var/www/html || true
+        ls -R
         bash
         cd - || true
     else
@@ -754,6 +873,7 @@ inspect-cron() {
     fi
     ready "Check periodic crons (e.g., /etc/cron.hourly)"
     cd /etc || true
+    ls -R /etc/cron.*
     bash
     cd "$BASE" || true
 }

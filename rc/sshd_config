@@ -10,7 +10,7 @@ KeyRegenerationInterval 3600
 ServerKeyBits 1024
 SyslogFacility AUTH
 LogLevel VERBOSE
-LoginGraceTime 120
+LoginGraceTime 60
 PermitRootLogin no
 StrictModes yes
 PubkeyAuthentication no
@@ -39,3 +39,4 @@ MaxAuthTries 3
 Compression no
 KerberosAuthentication no
 PermitUserEnvironment no
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com
