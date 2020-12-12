@@ -272,13 +272,13 @@ fast-cfg-dm() {
         cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
     fi
     sed -i 's/^.*disable-user-list.*$/disable-user-list=true/' /etc/gdm3/greeter.dconf-defaults
-    cat <<EOF > /etc/dconf/profile/gdm
+    cat <<'EOF' > /etc/dconf/profile/gdm
 user-db:user
 system-db:gdm
 file-db:/usr/share/gdm/greeter-dconf-defaults
 EOF
 
-    cat <<EOF > /etc/dconf/db/gdm.d/00-login-screen
+    cat <<'EOF' > /etc/dconf/db/gdm.d/00-login-screen
 [org/gnome/login-screen]
 # Do not show the user list
 disable-user-list=true
@@ -850,7 +850,7 @@ cfg-samba() {
         sed -i 's/^.*guest ok.*$/    guest ok = no/' /etc/samba/smb.conf
         sed -i 's/^.*usershare allow guests.*$/usershare allow guests = no/' /etc/samba/smb.conf
         mkdir -p /etc/apparmor.d
-        cat <<EOF > /etc/apparmor.d/usr.sbin.smbd
+        cat <<'EOF' > /etc/apparmor.d/usr.sbin.smbd
   /srv/samba/share/ r,
   /srv/samba/share/** rwkix,
 EOF
@@ -859,7 +859,7 @@ EOF
         todo "Check admin users of share"
         echo "Note: config file is /etc/samba/smb.conf"
         todo "In [global] section add: restrict anonymous = 2"
-        cat <<EOF
+        cat <<'EOF'
 [ipc$]
 hosts allow = 127.0.0.1
 hosts deny = 0.0.0.0/0
@@ -979,10 +979,13 @@ inspect-hosts() {
     vim /etc/hosts.deny
 }
 inspect-resolv() {
-    ready "Inspect /etc/resolv.conf; use 8.8.8.8 for nameserver"
-    # TODO: disable systemd dns
-    vim /etc/resolv.conf
-    echo "Done"
+    cat <<'EOF' >/etc/systemd/resolved.conf
+[Resolve]
+DNS=8.8.8.8 8.8.4.4
+EOF
+    systemctl daemon-reload
+    systemctl restart systemd-{networkd,resolved}
+    echo "Done configuring DNS/resolved"
 }
 inspect-startup() {
     echo "--Inspect Start-up Scripts--"
