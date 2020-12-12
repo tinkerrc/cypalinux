@@ -792,7 +792,7 @@ cfg-wordpress() {
 }
 cfg-bind9() {
     read -n 1 -rp "Is bind9 a critical service? [ynI] "
-    if [[ $REPLY ~= ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         # TODO
         echo NI
         apt install -y bind9
@@ -803,7 +803,7 @@ cfg-bind9() {
 
         cd /etc/bind/ &>/dev/null || cd /etc || true
         bash
-    elif [[ $REPLY ~= ^[Nn]$ ]]; then
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
         disnow named
         apt -my purge bind9*
     else
@@ -813,14 +813,14 @@ cfg-bind9() {
 }
 cfg-nginx() {
     read -n 1 -rp "Is nginx a critical service? [ynI] "
-    if [[ $REPLY ~= ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         # TODO
         echo NI
         apt install -y nginx
         ready "Configure nginx"
         cd /etc/nginx || cd /etc
         bash
-    elif [[ $REPLY ~= ^[Nn]$ ]]; then
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
         disnow nginx
         apt -my purge nginx*
     else
@@ -829,14 +829,14 @@ cfg-nginx() {
 }
 cfg-postgresql() {
     read -n1 -rp "Is postgresql a critical service? [ynI] "
-    if [[ $REPLY ~= ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         # TODO
         echo NI
         apt install -y postgresql{,-contrib}
         ready "Configure postgresql (/etc/postgresql/VERSION/...)"
         cd /etc/postgresql
         bash
-    elif [[ $REPLY ~= ^[Nn]$ ]]; then
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
         disnow postgresql
         apt -my purge postgresql
     else
