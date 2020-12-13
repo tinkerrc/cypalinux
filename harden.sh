@@ -4,6 +4,7 @@ set -u
 #   |     Linux Hardening Script     |
 #   | Walnut HS Cyber Security Club  |
 #   ==================================
+#   TODO: fully integrate all/most CIS rules from the benchmark
 
 if [ ! "$(whoami)" = "root" ]; then
     echo "Please try again with root privileges..."
