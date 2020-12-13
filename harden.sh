@@ -64,10 +64,11 @@ harden-impl() {
 
 pkgchk() {
     if (dpkg-query -W -f='${Status}' $1 2>/dev/null | grep 'ok installed' &>/dev/null); then
-        if [[ "$2" != "" ]]; then
+        if (($# > 1)); then
             echo -e "\033[0;35;1;4m>>> $1 is INSTALLED and $2 is $(systemctl is-active $2 2>/dev/null)\033[0m"
         else
-            echo "$1 is INSTALLED"
+            # FIXME: color doesn't work
+            echo "\033[0;35;1;4m$1 is INSTALLED\033[0m"
         fi
     else
         echo "$1 is NOT installed"
@@ -456,8 +457,9 @@ fast-audit-pkgs() {
     disnow dovecot
     disnow squid
     disnow nis
+    disnow snmpd
     prelink -ua
-    apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* build-essential
+    apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* build-essential snmpd
     apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip nikto*
     apt -my --ignore-missing purge prelink nfs-* portmap squid rsync nis rsh-* talk telnet ldap-*
     apt -y install apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp chrony
@@ -503,8 +505,10 @@ user-audit() {
 }
 inspect-passwd() {
     grep :0: /etc/passwd
+    echo "--->>> Check UID < 1000 <<<---"
+    sleep 1.5
     ready "Inspect abnormal users (eg. UID 0, weird shell/home)"
-    vim /etc/passwd
+    vipw
     echo "/etc/passwd inspection complete"
 }
 inspect-group() {
@@ -513,7 +517,7 @@ inspect-group() {
     grep sudo /etc/group
     echo "sudo,adm,admin,wheel"
     ready "Inspect groups"
-    vim /etc/group
+    vigr
     echo "/etc/group inspection complete"
 }
 cfg-dm() {
@@ -811,6 +815,10 @@ cfg-bind9() {
 
 }
 cfg-nginx() {
+    # TODO: https://www.acunetix.com/blog/web-security-zone/hardening-nginx/
+    # TODO: https://geekflare.com/http-header-implementation/#anchor-http-strict-transport-security
+    # TODO: https://docs.nginx.com/nginx/admin-guide/security-controls/terminating-ssl-http/
+    # TODO: https://www.nginx.com/resources/wiki/start/topics/examples/full/
     read -n 1 -rp "Is nginx a critical service? [ynI] "
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         # TODO
@@ -820,6 +828,8 @@ cfg-nginx() {
         cd /etc/nginx || cd /etc
         bash
     elif [[ $REPLY =~ ^[Nn]$ ]]; then
+        ufw enable http
+        ufw enable https
         disnow nginx
         apt -my purge nginx*
     else
