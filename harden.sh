@@ -5,6 +5,8 @@ set -u
 #   | Walnut HS Cyber Security Club  |
 #   ==================================
 #   TODO: fully integrate all/most CIS rules from the benchmark
+#   TODO: https://www.stigviewer.com/stig/canonical_ubuntu_18.04_lts/
+#   TODO: look for auto start programs / services
 
 if [ ! "$(whoami)" = "root" ]; then
     echo "Please try again with root privileges..."
@@ -93,6 +95,8 @@ basic-recon() {
     else
         echo "/var/www not found"
     fi
+    # TODO: nmap / rustscan all ports
+    # TODO: look for (and ALSO IMPLEMENT CFGs) for services in the 'insect' port list
     todo "Read recon report above (also in $BASE/recon)"
 }
 
@@ -107,7 +111,7 @@ section-streamline() {
     fast-audit-fs
     firewall
     cfg-sys
-    cfg-sudoer
+    fast-cfg-sudoer
     cfg-common
     cfg-fail2ban
     restrict-cron
@@ -125,6 +129,7 @@ section-common() {
     do-task cfg-dm
     lock-root
     chsh-root
+    do-task cfg-sudoer
     do-task find-pw-text-files
     do-task audit-fs
     do-task audit-pkgs
@@ -254,6 +259,8 @@ ensure-python3() {
     fi
 }
 fast-cfg-dm() {
+    # TODO: research Ubuntu 18 lightdm.conf location
+    # TODO: get Debian GDM config
     if [ -d /etc/lightdm ]; then
         echo > "$DATA/lightdmconf" # clear file
         while read -r line
@@ -366,7 +373,7 @@ cfg-sys() {
     echo '* hard core 0' > /etc/security/limits.conf
     echo "/etc/sysctl.conf has been installed"
 }
-cfg-sudoer() {
+fast-cfg-sudoer() {
     cp /etc/sudoers{,.bak}
     cat "$BASE/rc/sudoers" > /etc/sudoers
     echo "Sudoers audit complete"
@@ -441,9 +448,9 @@ fix-file-perms() {
     chmod 755 /home
     chmod 700 /home/*
     find /home -maxdepth 2 -mindepth 2 -name ".ssh" -type d -exec chmod 700 {} \; -print
-    # assuming there's no funny business going on in .ssh/, should only have files
-    # not directories
+    find /home -maxdepth 2 -mindepth 2 -name ".gnupg" -type d -exec chmod 700 {} \; -print
     find /home -maxdepth 3 -mindepth 2 -path "*.ssh*" -type f -exec chmod 600 {} \; -print
+    find /home -maxdepth 3 -mindepth 2 -path "*.gnupg*" -type f -exec chmod 600 {} \; -print
     echo "Secured home and .ssh/* permissions"
     echo "Inspection complete"
 }
@@ -460,9 +467,12 @@ fast-audit-pkgs() {
     disnow nis
     disnow snmpd
     prelink -ua
-    apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* build-essential snmpd
-    apt -my --ignore-missing purge medusa vino ophcrack minetest aircrack-ng fcrackzip nikto*
-    apt -my --ignore-missing purge prelink nfs-* portmap squid rsync nis rsh-* talk telnet ldap-*
+
+    # Hacking tools / backdoors
+    apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* medusa vino ophcrack aircrack-ng fcrackzip nikto* iodine kismet ayttm empathy logkeys
+    # Unnecessary packages
+    apt -my --ignore-missing purge build-essential prelink mintest rsync snmp* nfs-* squid nis rsh-* talk portmap telnet* ldap-* tightvncserver rdesktop remmina vinagre ircd* znc sendmail postfix sqwebmail cyrus-* dovecot* mailutils* zeya yaws thin pdnsd dns2tcp gdnsd ldap2dns maradns nsd* zentyal-dns
+
     apt -y install apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp chrony
     auditctl -w /etc/shadow -k shadow-file -p rwxa
     aideinit
@@ -547,6 +557,11 @@ chsh-root() {
         echo "root shell not changed"
     fi
 }
+cfg-sudoer() {
+    ready "Secure sudo configs and see test if sudo works (use sudo -l on regular account)"
+    cd /etc/sudoers.d/
+    bash
+}
 find-pw-text-files() {
     # TODO: automate; find password.*; grep -rn PASSWORD /home
     echo '--- Potential Password Files Start ---'
@@ -565,7 +580,9 @@ audit-pkgs() {
     if (which software-properties-gtk &>/dev/null); then
         todo "Launch software-properties-gtk (Software & Updates)"
     fi
-    dpkg-reconfigure postfix
+
+    # TODO: add list from insect (probably have to manually confirm or remove package name from script beforehand)
+    # apt autoremove --purge 
     echo '--- Manually Installed Packages Start ---'
     comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u) | tee "$BASE/manually-installed"
     echo '---  Manually Installed Packages End  ---'
@@ -928,11 +945,13 @@ inspect-cron() {
 }
 inspect-ports() {
     ready "Inspect ports"
-    echo ----
+    echo ---- Network
     netstat -plunte
-    echo ----
+    echo ---- Backdoors
+    netstat -tupwn
+    echo ---- lsof
     lsof -i -n -P
-    echo ----
+    echo ---- END OF LIST
     ready "Take action in bash (check if netstat / ss is compromised)"
     bash
 }
