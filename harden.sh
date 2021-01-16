@@ -4,6 +4,16 @@ set -u
 #   |     Linux Hardening Script     |
 #   | Walnut HS Cyber Security Club  |
 #   ==================================
+#   TODO: maybe concentrate all user input at once
+#   TODO: fix change password function
+#   TODO: chage -M 15 -m 6 -W7 -I 5 user (for every user)
+#   TODO: fix webroot perms
+#   TODO: move the "inspecting" functions into a single recon function
+#   TODO: read cis benchmark for Debian
+#   TODO: read cis benchmark for Ubuntu 18.04
+#   TODO: if debian, don't just copy sysctl, select the necessary ones
+#   TODO: check which `ready` is not necessary
+#   TODO: prepare package list of default debian install
 #   TODO: fully integrate all/most CIS rules from the benchmark
 #   TODO: https://www.stigviewer.com/stig/canonical_ubuntu_18.04_lts/
 #   TODO: look for auto start programs / services
@@ -83,6 +93,7 @@ basic-recon() {
     pkgchk apache2 apache2
     pkgchk mysql mysql
     pkgchk php
+    pkgchk wordpress
     pkgchk vsftpd vsftpd
     pkgchk proftpd proftpd
     pkgchk pure-ftpd pure-ftpd
@@ -99,7 +110,6 @@ basic-recon() {
     # TODO: look for (and ALSO IMPLEMENT CFGs) for services in the 'insect' port list
     todo "Read recon report above (also in $BASE/recon)"
 }
-
 section-streamline() {
     install-apt-src
     backup
@@ -118,6 +128,9 @@ section-streamline() {
     fix-file-perms
     fast-audit-pkgs
     cfg-auditd
+    cfg-grub
+
+    # remove support for unnecessary fs
 }
 section-common() {
     todo "Read the README before proceeding"
@@ -136,6 +149,7 @@ section-common() {
 }
 section-regular() {
     do-task inspect-svc
+    # TODO: split lamp into separate functions
     do-task cfg-lamp
     do-task cfg-ftp
     do-task cfg-bind9
@@ -174,9 +188,13 @@ ready() {
     if [ "$*" != "" ]; then
         echo -e "\033[0;35;1;4mREADY:\033[0m $*"
     fi
-    sleep 0.75
-    # NOTE: disabled read
-    #read -n 1 -rp "Press [ENTER] when you are ready"
+    read -n 1 -rp "Press [ENTER] when you are ready"
+}
+act() {
+    # Tell the user to do something manually
+    if [ "$*" != "" ]; then
+        echo -e "\033[0;35;1;4mACT:\033[0m $*"
+    fi
 }
 do-task() {
     # in case the script is stopped midway
@@ -316,6 +334,19 @@ cfg-sshd() {
     echo "New sshd_config applied"
 }
 fast-audit-fs() {
+    systemctl disable autofs
+    echo "tmpfs      /dev/shm    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    echo "tmpfs      /tmp        tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    echo "tmpfs      /var/tmp    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    mount -o remount,nodev /tmp
+    mount -o remount,nodev /var/tmp
+    mount -o remount,nodev /dev/shm
+    FS=(freevxfs jffs2 hfs hfsplus udf)
+    for fs in "${FS[@]}"; do
+        echo "install $fs /bin/true" >> /etc/modprobe.d/$fs.conf
+        rmmod $fs -v
+    done
+
     rm -f /home/*/.netrc
     rm -f /home/*/.forward
     rm -f /home/*/.rhosts
@@ -347,6 +378,7 @@ firewall() {
     apt install -y ufw iptables
     chmod 751 /lib/ufw
     ufw enable
+    ufw --force reset
     ufw logging high
     ufw default deny incoming
     ufw default allow outgoing
@@ -398,6 +430,8 @@ cfg-fail2ban() {
     systemctl restart fail2ban || service fail2ban restart || echo "Failed to restart fail2ban"
 }
 restrict-cron() {
+    echo "Backing up crontabs just to be sure"
+    cp -r /var/spool/cron/ "$BACKUP/quarantine"
     echo "Setting allowed cron/at users to root"
     crontab -r # reset crontabs
     # only root can use cron & at
@@ -408,6 +442,16 @@ restrict-cron() {
     echo "Done!"
 }
 fix-file-perms() {
+    # TODO: fix perms for all possible config files
+    # TODO: prompt to check for permissions manually
+    # TODO: fix perms for other service configs
+    chown -R root:root /etc/default/grub
+    chmod 644 /etc/default/grub
+    chown -R root:root /etc/grub.d
+    chmod -R 755 /etc/grub.d/*_*
+    chown -R root:root /boot/grub
+    chmod 600 /boot/grub/grub.cfg
+
     chown root:root /
     chmod 751 /
     chmod 644 /etc/passwd
@@ -457,6 +501,11 @@ fix-file-perms() {
 disnow() {
     systemctl disable --now $1
 }
+add-crontab() {
+    crontab -l > "$DATA/crontab"
+    echo "$1" >> "$DATA/crontab"
+    crontab "$DATA/crontab"
+}
 fast-audit-pkgs() {
     disnow avahi-daemon
     disnow cups
@@ -469,19 +518,35 @@ fast-audit-pkgs() {
     prelink -ua
 
     # Hacking tools / backdoors
-    apt -my --ignore-missing purge hydra* nmap zenmap john* netcat* medusa vino ophcrack aircrack-ng fcrackzip nikto* iodine kismet ayttm empathy logkeys
+    apt -my --ignore-missing purge hydra* frostwire vuze nmap zenmap john* netcat* medusa vino ophcrack aircrack-ng fcrackzip nikto* iodine kismet ayttm empathy logkeys
     # Unnecessary packages
     apt -my --ignore-missing purge build-essential prelink mintest rsync snmp* nfs-* squid nis rsh-* talk portmap telnet* ldap-* tightvncserver rdesktop remmina vinagre ircd* znc sendmail postfix sqwebmail cyrus-* dovecot* mailutils* zeya yaws thin pdnsd dns2tcp gdnsd ldap2dns maradns nsd* zentyal-dns
 
+
     apt -y install apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp chrony
+    auditctl -e 1
     auditctl -w /etc/shadow -k shadow-file -p rwxa
     aideinit
+    add-crontab "0 5 * * * /usr/bin/aide.wrapper --config /etc/aide/aide.conf --check"
     apt -y autoremove
 }
 cfg-auditd() {
     mkdir -p /etc/audit
     cat "$BASE/rc/audit.rules" > /etc/audit/audit.rules
     systemctl reload auditd
+}
+cfg-grub() {
+    # TODO: test to see if it works
+    cat <<EOF >/etc/grub.d/40_custom
+#!/bin/sh
+exec tail -n +3 $0
+set check_signatures=enforce
+export check_signatures
+set superusers="root"
+password_pbkdf2 root grub.pbkdf2.sha512.10000.F3F2D81BB5BF66BB56CC88C41519B91CA92FBA2AF16A04E7E381C525603F2E1DF1F40BAE5DD8731791B2D8D8CD4E4681B1E12047582E7533FE4D4D4B0C982FFE.00BEAB2F9E09CBF5A8225882CE7E527D54AFC1E2D5C98D3AC59A8DED05D047BD7E304D6AD3682210270A66F43CC5922FEF7FAE583885063F9DDBCF8897B3A80F
+EOF
+    sed -i 's/^CLASS="--class gnu-linux --class gnu --class os"$/CLASS="--class gnu-linux --class gnu --class os --unrestricted"/' /etc/grub.d/10_linux
+    update-grub
 }
 
 # ====================
@@ -591,6 +656,12 @@ audit-pkgs() {
     apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt" | tee "$BASE/nonbase-pkgs"
     echo '---       Non-base packages End       ---'
     ready "Inspect and remove packages listed above if necessary (see $BASE/manually-installed and $BASE/nonbase-pkgs)"
+    bash
+
+    apt-cache policy
+    echo "==========="
+    apt-key list
+    act "if anything is sus"
     bash
 
     # TODO: async OR just do it manually :)
@@ -916,6 +987,7 @@ inspect-www() {
     fi
 }
 inspect-cron() {
+    # TODO: check quarantined cron
     ready "Check root cron"
     crontab -e
     ready "Check user cron"
@@ -926,7 +998,8 @@ inspect-cron() {
         cd /var/spool/cron/ || true
         bash
     else
-        echo "No known crontabs directory found."
+        echo "Check under $BACKUP/quarantine for crontabs"
+        cd "$BACKUP/quarantine"
         bash
     fi
     if [ -f /etc/anacrontab ]; then
@@ -1035,9 +1108,7 @@ inspect-unit-files() {
     fi
 }
 secure-fs() {
-    echo "tmpfs      /dev/shm    tmpfs   defaults,noexec,nodev,nosuid   0 0" >> /etc/fstab
-    umount /dev/shm && mount /dev/shm || echo "Failed to remount /dev/shm with new settings"
-    ready "Inspect /etc/fstab"
+    ready "Inspect /etc/fstab (add nodev,nosuid,noexec on all removable media if any)"
     vim /etc/fstab
 }
 view-ps() {
@@ -1055,6 +1126,7 @@ suggestions() {
     todo "run https://github.com/openstack/ansible-hardening"
     todo "install scap workbench and scan the system"
     todo "run openvas"
+    todo "Install SELinux: https://wiki.debian.org/SELinux/Setup; check CIS p. 85 onwards"
 }
 
 # ====================
