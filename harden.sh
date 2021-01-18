@@ -487,6 +487,39 @@ fix-file-perms() {
     chmod 700 /boot
     chmod 1777 /tmp
     chown root:root /tmp
+    chmod 644 /etc/environment
+    chown root:root /etc/environment
+    chmod 644 /etc/login.defs
+    chown root:root /etc/login.defs
+    chmod 644 /etc/host*
+    chown root:root /etc/host*
+    chmod 777 /etc/resolv.conf
+    chown root:root /etc/resolv.conf
+    chmod 644 /etc/profile
+    chown root:root /etc/profile
+    # TODO: find the perms for /etc/mkinit...
+    chmod 664 /etc/fstab
+    chown root:root /etc/fstab
+    chmod 644 /etc/bash.*
+    chown root:root /etc/bash.* 
+    chmod 400 /etc/sudoers
+    chown root:root /etc/sudoers
+    chmod 755 /etc/sudoers.d
+    chown root:root /etc/sudoers.d
+    chmod 440 /etc/sudoers.d/*
+    chown root:root /etc/sudoers.d/*
+    chmod 755 /etc/ssh
+    chown root:root /etc/ssh
+    chmod 644 /etc/ssh/*
+    chown root:root /etc/ssh/*
+    chmod 755 /etc/php
+    chown root:root /etc/php
+    chmod 755 /etc/pam.d
+    chown root:root /etc/pam.d
+    chmod 644 /etc/pam.d/*
+    chown root:root /etc/pam.d/*
+    chmod 755 /etc/default
+    chown root:root /etc/default
     echo "Common system file permissions corrected"
 
     chmod 755 /home
