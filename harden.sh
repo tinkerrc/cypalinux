@@ -175,8 +175,8 @@ stg-fast() {
     restrict-cron
     fix-file-perms
     audit-pkgs
-    cfg-auditd
-    cfg-grub
+    #cfg-auditd
+    #cfg-grub
 
     # remove support for unnecessary fs
 }
