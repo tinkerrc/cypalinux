@@ -291,17 +291,17 @@ cfg-dm() {
         cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
     fi
     sed -i 's/^.*disable-user-list.*$/disable-user-list=true/' /etc/gdm3/greeter.dconf-defaults
-    cat <<'EOF' > /etc/dconf/profile/gdm
-user-db:user
-system-db:gdm
-file-db:/usr/share/gdm/greeter-dconf-defaults
-EOF
-
-    cat <<'EOF' > /etc/dconf/db/gdm.d/00-login-screen
-[org/gnome/login-screen]
-# Do not show the user list
-disable-user-list=true
-EOF
+#    cat <<'EOF' > /etc/dconf/profile/gdm
+#user-db:user
+#system-db:gdm
+#file-db:/usr/share/gdm/greeter-dconf-defaults
+#EOF
+#
+#    cat <<'EOF' > /etc/dconf/db/gdm.d/00-login-screen
+#[org/gnome/login-screen]
+## Do not show the user list
+#disable-user-list=true
+#EOF
 
     dconf update
 }
