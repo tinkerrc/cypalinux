@@ -174,7 +174,7 @@ stg-fast() {
     cfg-fail2ban
     restrict-cron
     fix-file-perms
-    audit-pkgs
+    #audit-pkgs
     #cfg-auditd
     #cfg-grub
 
