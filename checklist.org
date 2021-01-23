@@ -1,0 +1,7 @@
+#+title: Checklist
+
+* Common
+* Normal
+* Rare
+* When Desperate
+- check =/etc= files or dirs not owned by root (~find /etc ! -user root~)

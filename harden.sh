@@ -17,6 +17,7 @@ set -u
 #   TODO: fully integrate all/most CIS rules from the benchmark
 #   TODO: https://www.stigviewer.com/stig/canonical_ubuntu_18.04_lts/
 #   TODO: look for auto start programs / services
+#   TODO: bashrc
 
 if [ ! "$(whoami)" = "root" ]; then
     echo "Please try again with root privileges..."
@@ -64,10 +65,10 @@ harden-impl() {
     basic-recon | tee "$BASE/recon"
 
     todo "Launch a root shell in another terminal in case something goes wrong"
-    section-streamline
-    section-common
-    section-regular
-    section-rare
+    stage-streamline
+    stage-common
+    stage-regular
+    stage-rare
 
     apt autoremove
     echo "Done!"
@@ -110,7 +111,7 @@ basic-recon() {
     # TODO: look for (and ALSO IMPLEMENT CFGs) for services in the 'insect' port list
     todo "Read recon report above (also in $BASE/recon)"
 }
-section-streamline() {
+stage-streamline() {
     install-apt-src
     backup
     ensure-vim
@@ -132,7 +133,7 @@ section-streamline() {
 
     # remove support for unnecessary fs
 }
-section-common() {
+stage-common() {
     todo "Read the README before proceeding"
     todo "Do Forensics Questions"
     firefox-config
@@ -147,7 +148,7 @@ section-common() {
     do-task audit-fs
     do-task audit-pkgs
 }
-section-regular() {
+stage-regular() {
     do-task inspect-svc
     # TODO: split lamp into separate functions
     do-task cfg-lamp
@@ -161,7 +162,7 @@ section-regular() {
     do-task inspect-ports
     do-task inspect-netcat
 }
-section-rare() {
+stage-rare() {
     do-task inspect-apt-src
     do-task inspect-file-attrs
     do-task inspect-hosts
@@ -597,7 +598,7 @@ user-audit() {
     usermod -g 0 root
     ready "Enter a list of authorized users"
     vim "$DATA/auth"
-    sed "s/$/: Password123!/" "$DATA/auth" | chpasswd
+    sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' "$DATA/auth" | chpasswd
     # TODO: ask for autologin username and prevent pw change
     # TODO: automate group fixing here and remove inspect-group
     awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
