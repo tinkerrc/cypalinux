@@ -2,6 +2,7 @@
 
 For all 'S: ' headings, restart the service after changing config
 * Resources
+- https://drive.google.com/drive/folders/1MvrYeuRdYoVHumR9Dn9W6K9DGVOhSCf3
 - [[http://cypat.guru/index.php/Main_Page][ETA CyberPatriot Wiki]]
 - [[https://www.stigviewer.com/stig/canonical_ubuntu_18.04_lts/][Canonical Ubuntu 18.04 LTS Security Technical Implementation Guide]]
 - [[https://github.com/openstack/ansible-hardening][openstack/ansible-hardening]]
