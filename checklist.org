@@ -1,13 +1,27 @@
 #+title: Checklist
 
+For all 'S: ' headings, restart the service after changing config
 * Resources
 - [[http://cypat.guru/index.php/Main_Page][ETA CyberPatriot Wiki]]
+- [[https://www.stigviewer.com/stig/canonical_ubuntu_18.04_lts/][Canonical Ubuntu 18.04 LTS Security Technical Implementation Guide]]
 - [[https://github.com/openstack/ansible-hardening][openstack/ansible-hardening]]
 - SCAP Workbench
 - OpenVAS
 - [[https://wiki.debian.org/SELinux/Setup][SELinux/Setup - Debian Wiki]]
 * Common
 - firefox config
+- check /root
+- potential packages to remove:
+  + exim4
+- check quarantined files in ~$BACKUP/quarantine~
+- check crons
+  + /var/spool/cron/crontabs
+  + /etc/anacrontab
+  + /var/spool/anacrontab
+  + check /etc/cron.*
+    : ls -R /etc/cron.*
+- change password (check if chpasswd in the script worked)
+- when installing updates: update, restart, update, restart
 - software-properties-gtk
 - check ~ps axjf~
 - check /etc/passwd with ~vipw~
@@ -43,18 +57,31 @@ apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt"
   [+] = running
   [-] = stopped
   [?] = an upstart service or status unsupported
+- if Ubuntu: check Ubuntu Software center for installed packages that dpkg misses
+- check config overrides
+- audit PATH variable, or better, audit =/etc/{environment,profile,...}= and =/home/*/.{profile,bashrc,...}=
 - set web root owner & permission (www-data or check image readme)
-- inspect files in web root
-- netstat -plunte
-- netstat -tupwn
-- lsof -i -n -P
+- inspect files in web root; look for sensitive data / webshells
+  webshell in round 4 (3 for this year?) is usually hidden in wordpress files, so don't look manually. use grep -rni 'php system' or grep -rni system('; see google classroom for list of keywords to search for
+- check files in =/etc= not owned by root
+- find world writable files (~find / -perm -002~)
+- find backdoors
+  + netstat -plunte
+  + netstat -tupwn
+  + lsof -i -n -P
 - pgrep -a nc
+- fuser $PORT/tcp
+- ps aux | grep $PORT
 - check start up scripts
   /etc/rc.local
   /etc/init.d
 - check /etc/fstab
 * Rare
 - check ~apt-cache policy~
+- edit/add =/etc/postfix/main.cf=
+  : inet_interfaces = loopback-only
+  then run
+  : systemctl restart postfix
 - check for files with special attrs
   #+begin_src sh
 getfacl -Rs /home /etc /var | less
@@ -74,7 +101,72 @@ find / -type f -perm -4000
 - check ~apt-key list~
 - check ~systemctl list-units~
 - check =/etc/systemd= and =/home/USER/.config/systemd=
+- remove =.forward=, =.netrc=, =.rhosts= files from user home
 * When Desperate
 - check =/etc= files or dirs not owned by root (~find /etc ! -user root~)
 - check apt sources.d
+- check file permissions :/
 - check /etc/skel
+* S: PHP
+- check for additional configs & overrides in =/etc/php=
+* S: Wordpress
+- figure out whether wordpress was installed by downloading from internet or installing the wordpress package, if package, check ~cfg-wordpress~
+- go to admin portal, secure everything :)
+- try finding weird plugins (in admin portal)
+- check =/usr/share/wordpress= and =/var/www=
+- http://localhost/wp-admin/install.php
+* S: Bind9
+- resources
+  - [[https://wiki.debian.org/Bind9][Bind9 - Debian Wiki]]
+- config dir :: =/etc/bind=
+- service name :: named
+- package name :: bind9 (do NOT remove bind9-host)
+-----
+* S: Nginx
+- resources
+  + [[https://www.acunetix.com/blog/web-security-zone/hardening-nginx/][Nginx server security - hardening Nginx configuration]]
+  + [[https://geekflare.com/http-header-implementation/#anchor-http-strict-transport-security][How to Implement Security HTTP Headers to Prevent Vulnerabilities?]]
+  + [[https://docs.nginx.com/nginx/admin-guide/security-controls/terminating-ssl-http/][NGINX Docs | NGINX SSL Termination]]
+  + [[https://www.nginx.com/resources/wiki/start/topics/examples/full/][Full Example Configuration | NGINX]]
+- config dir :: /etc/nginx
+- reload config :: nginx -s reload
+-----
+* S: Samba
+- restart :: systemctl restart smbd.service nmbd.service
+- config file :: /etc/samba/smb.conf
+-----
+- in =[global]= section: =restrict anonymous = 2=
+- replace ipc$ share with:
+  #+begin_src conf
+[ipc$]
+hosts allow = 127.0.0.1
+hosts deny = 0.0.0.0/0
+guest ok = no
+browseable = no
+#+end_src
+- check admin users of samba shares
+* S: ProFTPd
+- restart :: systemctl restart proftpd
+-----
+* S: MySQL
+- restart :: systemctl restart mysql
+-----
+- run mysql_secure_installation
+- remove skip-grant-tables (to find: ~grep -rn "skip-grant-tables" /etc/mysql~)
+* S: Apache
+- reload :: systemctl reload apache2
+- config dir :: /etc/apache2
+- main config :: /etc/apache2/apache2.conf
+-----
+- use tls
+  + [[https://httpd.apache.org/docs/2.4/ssl/ssl_howto.html][SSL/TLS Strong Encryption: How-To - Apache HTTP Server Version 2.4]]
+  + [[https://geekflare.com/apache-web-server-hardening-security/][Apache Web Server Hardening and Security Guide]]
+  + add to main config: Header edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure
+- check if there's anything that needs to be migrated from the old config into the new
+  : vim -O /etc/apache2/apache2.conf{,.bak}
+- check config overrides
+- inspect .htaccess (check under web root)
+- check sites-available and sites-enabled
+- check conf-available and conf-enabled
+* S: Postgres
+- service :: postgresql
