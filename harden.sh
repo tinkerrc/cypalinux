@@ -57,7 +57,7 @@ harden-impl() {
     stg-fast
     stg-modules
 
-    apt autoremove
+    #apt autoremove
     echo "The main script is finished. Consider invoking 'scan'."
 
     bash
@@ -535,22 +535,22 @@ audit-pkgs() {
     prelink -ua
 
     # Hacking tools / backdoors
-    local banned=(hydra\* frostwire vuze nmap zenmap john\* netcat\* medusa vino ophcrack aircrack-ng fcrackzip nikto\* iodine kismet ayttm empathy logkeys)
-    # Unnecessary packages
-    banned+=(build-essential prelink mintest rsync snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap telnet\* ldap-\* tightvncserver ircd\* znc sqwebmail cyrus-\* dovecot\*)
-    banned+=()
+    #local banned=(hydra\* frostwire vuze nmap zenmap john\* netcat\* medusa vino ophcrack aircrack-ng fcrackzip nikto\* iodine kismet ayttm empathy logkeys)
+    ## Unnecessary packages
+    #banned+=(build-essential prelink mintest rsync snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap telnet\* ldap-\* tightvncserver ircd\* znc sqwebmail cyrus-\* dovecot\*)
+    #banned+=()
 
-    for pkg in "${banned[@]}"; do
-        apt -y purge $pkg
-    done
+    #for pkg in "${banned[@]}"; do
+    #    apt -y purge $pkg
+    #done
 
-    apt -y install tcpd apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp chrony
+    apt -y install tcpd apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp
     #aa-enforce /etc/apparmor.d/*
     #auditctl -e 1
     #auditctl -w /etc/shadow -k shadow-file -p rwxa
     #aideinit
     add-crontab "0 5 * * * /usr/bin/aide.wrapper --config /etc/aide/aide.conf --check"
-    apt -y autoremove
+    #apt -y autoremove
 }
 cfg-auditd() {
     mkdir -p /etc/audit
@@ -592,7 +592,7 @@ audit-users() {
 cfg-ftp() {
     if [[ $use_pureftpd =~ ^[Nn]$ ]]; then
         echo "Removing Pure-FTPD"
-        apt autoremove -y --purge pure-ftpd
+        #apt autoremove -y --purge pure-ftpd
     else
         ufw allow ftp
         ufw allow ftps
@@ -629,7 +629,7 @@ cfg-ftp() {
 
     if [[ $use_vsftpd =~ ^[Nn]$ ]]; then
         echo "Removing VSFTPD"
-        apt autoremove --purge vsftpd
+        #apt autoremove --purge vsftpd
     else
         ufw allow ftp
         ufw allow ftps
@@ -650,7 +650,7 @@ cfg-ftp() {
 
     if [[ $use_proftpd =~ ^[Nn]$ ]]; then
         echo "Removing Pro-FTPD"
-        apt autoremove --purge proftpd
+        #apt autoremove --purge proftpd
     else
         ufw allow ftp
         ufw allow ftps
@@ -672,7 +672,7 @@ cfg-ftp() {
 }
 cfg-apache() {
     if [[ $use_apache =~ ^[^Yy]$ ]]; then
-        apt autoremove -y apache2\* libapache2\*
+        #apt autoremove -y apache2\* libapache2\*
         return 0
     fi
     apt install -y apache2 libapache2-mod-{security2,evasive,php}
@@ -718,14 +718,14 @@ cfg-mysql() {
         todo "check if users have the right privileges"
         systemctl restart mysql
     elif [[ $use_mysql =~ ^[Nn]$ ]]; then
-        apt -y autoremove mysql\*
+        #apt -y autoremove mysql\*
     else
         echo "No action taken"
     fi
 }
 cfg-php() {
     if [[ $use_php =~ ^[^Yy]$ ]]; then
-        apt autoremove -y php\*
+        #apt autoremove -y php\*
         return 0
     fi
     apt install -y php{,-mysql,-cli,-cgi,-gd}
@@ -735,7 +735,7 @@ cfg-php() {
 }
 cfg-wordpress() {
     if [[ $use_wordpress =~ ^[^Yy]$ ]]; then
-        apt autoremove -y wordpress\*
+        #apt autoremove -y wordpress\*
         return 0
     fi
     apt install -y wordpress
@@ -755,7 +755,7 @@ cfg-bind9() {
         chmod -R o-r /etc/bind
     elif [[ $use_bind9 =~ ^[Nn]$ ]]; then
         disnow named
-        apt -y purge bind9
+        #apt -y purge bind9
     else
         echo "Will not remove bind9"
     fi
@@ -767,7 +767,7 @@ cfg-nginx() {
         ufw enable https
     elif [[ $use_nginx =~ ^[Nn]$ ]]; then
         disnow nginx
-        apt -y purge nginx\*
+        #apt -y purge nginx\*
     else
         echo "Will not remove nginx"
     fi
@@ -777,7 +777,7 @@ cfg-postgresql() {
         apt install -y postgresql{,-contrib}
     elif [[ $use_postgres =~ ^[Nn]$ ]]; then
         disnow postgresql
-        apt -y purge postgresql
+        #apt -y purge postgresql
     else
         echo "Will not remove postgresql"
     fi
@@ -799,7 +799,7 @@ EOF
     elif [[ $use_samba =~ ^[Nn]$ ]]; then
         echo "Removing samba"
         systemctl disable --now smbd.service nmbd.service
-        apt -y purge samba\*
+        #apt -y purge samba\*
     else
         echo "No actions taken"
     fi
