@@ -8,9 +8,10 @@ from pwd import getpwnam
 if os.geteuid() != 0:
     sys.exit('You must be root')
 
-auth_file = sys.argv[1]
-unchecked_file = sys.argv[2]
-unauthed_file = sys.argv[3]
+data_dir = sys.argv[1]
+auth_file = os.path.join(data_dir, "auth")
+unchecked_file = os.path.join(data_dir, "check")
+unauthed_file = os.path.join(data_dir, "unauth")
 
 authed = []
 with open(auth_file, "r") as f:
@@ -33,6 +34,4 @@ with open(unauthed_file, "w") as f:
                 print("User '" + user + "' (" + uid + ") removed")
                 continue
             print("User '" + user + "' (" + uid + ") not removed")
-        subprocess.call(['chage', '--maxdays', '90', user])
-        subprocess.call(['chage', '--mindays', '7', user])
-        subprocess.call(['chage', '--warndays', '7', user])
+        subprocess.call(['chage', '-M15', '-m6', '-W7', '-I5', user])

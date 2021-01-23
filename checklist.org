@@ -1,7 +1,80 @@
 #+title: Checklist
 
+* Resources
+- [[http://cypat.guru/index.php/Main_Page][ETA CyberPatriot Wiki]]
+- [[https://github.com/openstack/ansible-hardening][openstack/ansible-hardening]]
+- SCAP Workbench
+- OpenVAS
+- [[https://wiki.debian.org/SELinux/Setup][SELinux/Setup - Debian Wiki]]
 * Common
+- firefox config
+- software-properties-gtk
+- check ~ps axjf~
+- check /etc/passwd with ~vipw~
+- check /etc/group with ~vigr~; sensitive groups: sudo, adm, admin, wheel
+- check which DM is used
+  #+begin_src sh
+grep '/usr/s\?bin' /etc/systemd/system/display-manager.service | cut -d= -f2 | cut -d/ -f4
+  #+end_src
+  + LightDM: /etc/lightdm and /usr/share/lightdm/lightdm.conf.d/
+    GDM: /etc/gdm/*, disable-user-list=true in greeter conf
+- lock root account, ~passwd -l root~ or ~usermod -L root~
+- chsh root, ~chsh -s /usr/sbin/nologin root~
+- check =/etc/sudoers.d=
+- password text files
+  #+begin_src sh
+find /home -iname "*pass*"
+find /home -iname "*pw*"
+grep -r $PW /home /var /etc
+  #+end_src
+- audit filesystem
+- remove non-base packages
+  Manually installed:
+  #+begin_src sh
+comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u) | tee "$BASE/manually-installed"
+  #+end_src
+  Non-base:
+  #+begin_src sh
+apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt"
+  #+end_src
 * Normal
+- check services
+  : service --status-all | sort
+  [+] = running
+  [-] = stopped
+  [?] = an upstart service or status unsupported
+- set web root owner & permission (www-data or check image readme)
+- inspect files in web root
+- netstat -plunte
+- netstat -tupwn
+- lsof -i -n -P
+- pgrep -a nc
+- check start up scripts
+  /etc/rc.local
+  /etc/init.d
+- check /etc/fstab
 * Rare
+- check ~apt-cache policy~
+- check for files with special attrs
+  #+begin_src sh
+getfacl -Rs /home /etc /var | less
+lsattr -R /etc 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+lsattr -R /home 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+lsattr -R /root 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+lsattr -R /var 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
+find / -type f -perm -4000
+  #+end_src
+- check user .bashrc
+- check host files
+  #+begin_src sh
+ /etc/hosts
+ /etc/hosts.allow
+ #+end_src
+- /etc/hosts.deny  check cron (just to make sure)
+- check ~apt-key list~
+- check ~systemctl list-units~
+- check =/etc/systemd= and =/home/USER/.config/systemd=
 * When Desperate
 - check =/etc= files or dirs not owned by root (~find /etc ! -user root~)
+- check apt sources.d
+- check /etc/skel

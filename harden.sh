@@ -5,7 +5,6 @@ set -u
 #   | Walnut HS Cyber Security Club  |
 #   ==================================
 #   TODO: maybe concentrate all user input at once
-#   TODO: fix change password function
 #   TODO: chage -M 15 -m 6 -W7 -I 5 user (for every user)
 #   TODO: fix webroot perms
 #   TODO: move the "inspecting" functions into a single recon function
@@ -65,10 +64,10 @@ harden-impl() {
     basic-recon | tee "$BASE/recon"
 
     todo "Launch a root shell in another terminal in case something goes wrong"
-    stage-streamline
-    stage-common
-    stage-regular
-    stage-rare
+    stg-fast
+    stg-common
+    stg-regular
+    stg-rare
 
     apt autoremove
     echo "Done!"
@@ -111,7 +110,7 @@ basic-recon() {
     # TODO: look for (and ALSO IMPLEMENT CFGs) for services in the 'insect' port list
     todo "Read recon report above (also in $BASE/recon)"
 }
-stage-streamline() {
+stg-fast() {
     install-apt-src
     backup
     ensure-vim
@@ -133,22 +132,12 @@ stage-streamline() {
 
     # remove support for unnecessary fs
 }
-stage-common() {
+stg-common() {
     todo "Read the README before proceeding"
     todo "Do Forensics Questions"
-    firefox-config
     do-task user-audit
-    do-task inspect-passwd
-    do-task inspect-group
-    do-task cfg-dm
-    lock-root
-    chsh-root
-    do-task cfg-sudoer
-    do-task find-pw-text-files
-    do-task audit-fs
-    do-task audit-pkgs
 }
-stage-regular() {
+stg-regular() {
     do-task inspect-svc
     # TODO: split lamp into separate functions
     do-task cfg-lamp
@@ -161,18 +150,8 @@ stage-regular() {
     do-task inspect-cron
     do-task inspect-ports
     do-task inspect-netcat
-}
-stage-rare() {
-    do-task inspect-apt-src
-    do-task inspect-file-attrs
-    do-task inspect-hosts
-    do-task inspect-resolv
-    do-task inspect-startup
-    do-task inspect-unit-files
-    do-task secure-fs
-    do-task view-ps
+    do-task cfg-dns
     todo "Source harden.sh and invoke scan in a new terminal window"
-    do-task suggestions
 }
 
 # ====================
@@ -586,21 +565,13 @@ EOF
 # ====================
 # @common
 # ====================
-
-firefox-config() {
-    apt -y purge firefox &>/dev/null
-    apt -y install firefox
-    # TODO: add user.js (?)
-
-    todo "Configure Firefox; remember to set as default browser"
+user-input() {
+    ready "Enter a list of authorized users"
+    vim "$DATA/auth"
 }
 user-audit() {
     usermod -g 0 root
-    ready "Enter a list of authorized users"
-    vim "$DATA/auth"
     sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' "$DATA/auth" | chpasswd
-    # TODO: ask for autologin username and prevent pw change
-    # TODO: automate group fixing here and remove inspect-group
     awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
     python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/check" "$DATA/unauth"
     for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do
@@ -613,111 +584,11 @@ user-audit() {
     done
     echo "User audit complete"
 }
-inspect-passwd() {
-    grep :0: /etc/passwd
-    echo "--->>> Check UID < 1000 <<<---"
-    sleep 1.5
-    ready "Inspect abnormal users (eg. UID 0, weird shell/home)"
-    vipw
-    echo "/etc/passwd inspection complete"
-}
-inspect-group() {
-    # TODO: set sudo users automatically
-    grep adm /etc/group
-    grep sudo /etc/group
-    echo "sudo,adm,admin,wheel"
-    ready "Inspect groups"
-    vigr
-    echo "/etc/group inspection complete"
-}
-cfg-dm() {
-    echo "LightDM: /etc/lightdm/ and /usr/share/lightdm/lightdm.conf.d/"
-    echo "GDM: /etc/gdm/*, disable-user-list=true in greeter conf"
-    ready "Inspect DM config" # TODO: automate
-    echo "Note: currently using $(grep '/usr/s\?bin' /etc/systemd/system/display-manager.service | cut -d= -f2 | cut -d/ -f4)"
-    bash
-}
-lock-root() {
-    read -p "Lock the root account? [yN] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        passwd -l root
-        echo "root account locked"
-    else
-        echo "root account not locked"
-    fi
-}
-chsh-root() {
-    read -p "Change root shell to /usr/sbin/nologin? [yN] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        chsh -s "$(which nologin)" root
-    else
-        echo "root shell not changed"
-    fi
-}
-cfg-sudoer() {
-    ready "Secure sudo configs and see test if sudo works (use sudo -l on regular account)"
-    cd /etc/sudoers.d/
-    bash
-}
-find-pw-text-files() {
-    # TODO: automate; find password.*; grep -rn PASSWORD /home
-    echo '--- Potential Password Files Start ---'
-    find /home -name "*pass*"
-    find /home -name "*pw*"
-    echo '---  Potential Password Files End  ---'
-    ready "Try to find and quarantine (e.g., cd /home; grep -rwni P@a5w0rD)"
-    bash
-}
-audit-fs() {
-    ls /home/*
-    ready "Look for suspicious files"
-    bash
-}
-audit-pkgs() {
-    if (which software-properties-gtk &>/dev/null); then
-        todo "Launch software-properties-gtk (Software & Updates)"
-    fi
-
-    # TODO: add list from insect (probably have to manually confirm or remove package name from script beforehand)
-    # apt autoremove --purge 
-    echo '--- Manually Installed Packages Start ---'
-    comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u) | tee "$BASE/manually-installed"
-    echo '---  Manually Installed Packages End  ---'
-    echo
-    echo '---      Non-base packages Start      ---'
-    apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt" | tee "$BASE/nonbase-pkgs"
-    echo '---       Non-base packages End       ---'
-    ready "Inspect and remove packages listed above if necessary (see $BASE/manually-installed and $BASE/nonbase-pkgs)"
-    bash
-
-    apt-cache policy
-    echo "==========="
-    apt-key list
-    act "if anything is sus"
-    bash
-
-    # TODO: async OR just do it manually :)
-    apt -y update
-    apt -y dist-upgrade
-}
 
 # ====================
 # @regular
 # ====================
 
-inspect-svc() {
-    echo "Inspect services"
-    if which service &>/dev/null; then
-        echo " [+] : running"
-        echo " [-] : stopped"
-        echo " [?] : upstart service / status unsupported"
-        service --status-all | sort
-    fi
-    ready "Inspect services and systemd units in /etc/systemd and /home/**/.config/systemd"
-    bash
-}
 cfg-ftp() {
     read -n 1 -rp "Is Pure-FTPD a critical service? [Yn]"
     if [[ $REPLY =~ ^[Nn]$ ]]; then
@@ -809,8 +680,6 @@ cfg-lamp() {
     ufw deny mysql
     read -n1 -rp "Is LAMP necessary? [ynI]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        apt purge -y mysql-server
-        apt install -y wordpress apache2 libapache2-mod-{security2,evasive,php} mysql-server php{,-mysql,-cli,-cgi,-gd}
         cfg-apache
         cfg-mysql
         cfg-php
@@ -825,6 +694,7 @@ cfg-lamp() {
     fi
 }
 cfg-apache() {
+    apt install -y apache2 libapache2-mod-{security2,evasive,php}
     echo "Configuring apache2"
     cp /etc/apache2/apache2.conf{,.bak}
     cat "$BASE/rc/apache2.conf" > /etc/apache2/apache2.conf
@@ -833,8 +703,8 @@ cfg-apache() {
     cat "$BASE/rc/modsecurity.conf" > /etc/modsecurity/modsecurity.conf
     cat "$BASE/rc/crs-setup.conf" > /usr/share/modsecurity-crs/crs-setup.conf
     cat "$BASE/rc/security2.conf" > /etc/apache2/mods-available/security2.conf
-	chown root:root /etc/apache2
-	chmod 755 /etc/apache2
+    chown root:root /etc/apache2
+    chmod 755 /etc/apache2
     ln -s /usr/share/wordpress /var/www/html/wordpress
     a2enconf security
     a2dissite 000-default
@@ -873,6 +743,7 @@ cfg-apache() {
 cfg-mysql() {
     read -n1 -rp "Is MySQL a critical service? [ynI]"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
+        apt install -y mysql-server
         cp -r /etc/mysql "$BACKUP"
         echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database" > /etc/mysql/mysql.conf.d/mysqld.cnf
         echo -e "[mysql]\nlocal-infile=0" > /etc/mysql/conf.d/mysql.cnf
@@ -896,12 +767,14 @@ cfg-mysql() {
     fi
 }
 cfg-php() {
+    php{,-mysql,-cli,-cgi,-gd}
     cat "$BASE/rc/php.ini" > /etc/php/7.0/cli/php.ini
     php --ini
     ready "Look for extra PHP configurations"
     bash
 }
 cfg-wordpress() {
+    apt install -y wordpress
     gzip -d /usr/share/doc/wordpress/examples/setup-mysql.gz
     bash /usr/share/doc/wordpress/examples/setup-mysql -n wordpress localhost
     chown -R www-data:www-data /var/www/
@@ -1009,26 +882,10 @@ EOF
         echo "No actions taken"
     fi
 }
-inspect-www() {
-    if [ -d /var/www/html ]; then
-        ready "Inspect /var/www/html"
-        cd /var/www/html || true
-        ls -R
-        bash
-        cd - || true
-    else
-        echo "/var/www/html not found; no inspection necessary"
-    fi
-}
 inspect-cron() {
     # TODO: check quarantined cron
-    ready "Check root cron"
-    crontab -e
     ready "Check user cron"
-    if [ -d /var/spool/cron/crontabs/ ]; then
-        cd /var/spool/cron/crontabs/ || true
-        bash
-    elif [ -d /var/spool/cron/ ]; then
+    if [ -d /var/spool/cron/ ]; then
         cd /var/spool/cron/ || true
         bash
     else
@@ -1050,71 +907,7 @@ inspect-cron() {
     bash
     cd "$BASE" || true
 }
-inspect-ports() {
-    ready "Inspect ports"
-    echo ---- Network
-    netstat -plunte
-    echo ---- Backdoors
-    netstat -tupwn
-    echo ---- lsof
-    lsof -i -n -P
-    echo ---- END OF LIST
-    ready "Take action in bash (check if netstat / ss is compromised)"
-    bash
-}
-inspect-netcat() {
-    if pgrep nc > /dev/null; then
-        ready "View netcat backdoors"
-        echo ----
-        pgrep -a nc
-        echo ----
-        bash
-    else
-        echo "No netcat processes found"
-    fi
-    echo "Netcat inspection complete"
-}
-
-# ====================
-# @rare
-# ====================
-
-inspect-apt-src() {
-    if ! (find /etc/apt/sources.list.d 2>/dev/null | grep / -q); then
-        ready "Inspect APT sources.list.d"
-        vim /etc/apt/sources.list.d/
-        echo "Updating APT sources..."
-        apt update -y
-        echo "Done"
-    fi
-}
-inspect-file-attrs() {
-    ready "Search for files with non-base ACL in /home, /etc, and /var"
-    getfacl -Rs /home /etc /var | less
-
-    ready "Search for files with special attributes"
-    echo "---- begin"
-    lsattr -R /etc 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
-    lsattr -R /home 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
-    lsattr -R /root 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
-    lsattr -R /var 2>/dev/null | grep -v -e '--e--' | grep -v -e '/.*:$' | grep -v '^$'
-    echo "---- end"
-    echo "Files listed above contain special file attributes"
-
-    ready "Search for setuid files"
-    echo "---- begin"
-    find / -type f -perm -4000
-    echo "---- end"
-    ready "Take action in bash"
-    bash
-}
-inspect-hosts() {
-    ready "Inspect /etc/hosts, /etc/hosts.allow, /etc/hosts.deny"
-    vim /etc/hosts
-    vim /etc/hosts.allow
-    vim /etc/hosts.deny
-}
-inspect-resolv() {
+cfg-dns() {
     cat <<'EOF' >/etc/systemd/resolved.conf
 [Resolve]
 DNS=8.8.8.8 8.8.4.4
@@ -1122,45 +915,6 @@ EOF
     systemctl daemon-reload
     systemctl restart systemd-{networkd,resolved}
     echo "Done configuring DNS/resolved"
-}
-inspect-startup() {
-    echo "--Inspect Start-up Scripts--"
-    if [ -f /etc/rc.local ]; then
-        ready "Inspect /etc/rc.local"
-        vim /etc/rc.local
-    fi
-    if [ -d /etc/init.d ]; then
-        ready "Inspect /etc/init.d/"
-        vim /etc/init.d
-    fi
-    echo "Inspection complete"
-}
-inspect-unit-files() {
-    if which systemctl &>/dev/null; then
-        ready "View systemd unit files"
-        systemctl list-unit-files
-    fi
-}
-secure-fs() {
-    ready "Inspect /etc/fstab (add nodev,nosuid,noexec on all removable media if any)"
-    vim /etc/fstab
-}
-view-ps() {
-    ready "View process hierarchy"
-    ps axjf | less
-    ready "Take action in bash"
-    bash
-}
-suggestions() {
-    todo "check executables with find / -perm /4000 2>/dev/null"
-    todo "check /etc/skel and .bashrc"
-    todo "check /etc/adduser.conf"
-    todo "generate ssh keys"
-    todo "View http://cypat.guru/index.php/Main_Page"
-    todo "run https://github.com/openstack/ansible-hardening"
-    todo "install scap workbench and scan the system"
-    todo "run openvas"
-    todo "Install SELinux: https://wiki.debian.org/SELinux/Setup; check CIS p. 85 onwards"
 }
 
 # ====================
