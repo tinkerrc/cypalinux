@@ -328,13 +328,13 @@ cfg-sshd() {
     echo "New sshd_config applied"
 }
 audit-fs() {
-    systemctl disable autofs
-    echo "tmpfs      /dev/shm    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
-    echo "tmpfs      /tmp        tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
-    echo "tmpfs      /var/tmp    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
-    mount -o remount,nodev /tmp
-    mount -o remount,nodev /var/tmp
-    mount -o remount,nodev /dev/shm
+    #systemctl disable autofs
+    #echo "tmpfs      /dev/shm    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    #echo "tmpfs      /tmp        tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    #echo "tmpfs      /var/tmp    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    #mount -o remount,nodev /tmp
+    #mount -o remount,nodev /var/tmp
+    #mount -o remount,nodev /dev/shm
     local fss=(freevxfs jffs2 hfs hfsplus udf)
     for fs in "${fss[@]}"; do
         echo "install $fs /bin/true" >> /etc/modprobe.d/$fs.conf
@@ -537,7 +537,8 @@ audit-pkgs() {
     # Hacking tools / backdoors
     local banned=(hydra\* frostwire vuze nmap zenmap john\* netcat\* medusa vino ophcrack aircrack-ng fcrackzip nikto\* iodine kismet ayttm empathy logkeys)
     # Unnecessary packages
-    banned+=(slapd openbsd-inetd xinetd build-essential prelink mintest rsync snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap telnet\* ldap-\* tightvncserver rdesktop remmina vinagre ircd\* znc sendmail postfix sqwebmail cyrus-\* dovecot\* mailutils\* zeya yaws thin pdnsd dns2tcp gdnsd ldap2dns maradns nsd\* zentyal-dns)
+    banned+=(build-essential prelink mintest rsync snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap telnet\* ldap-\* tightvncserver ircd\* znc sqwebmail cyrus-\* dovecot\*)
+    banned+=()
 
     for pkg in "${banned[@]}"; do
         apt -y purge $pkg
