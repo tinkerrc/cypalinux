@@ -544,10 +544,10 @@ audit-pkgs() {
     done
 
     apt -y install tcpd apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp chrony
-    aa-enforce /etc/apparmor.d/*
-    auditctl -e 1
-    auditctl -w /etc/shadow -k shadow-file -p rwxa
-    aideinit
+    #aa-enforce /etc/apparmor.d/*
+    #auditctl -e 1
+    #auditctl -w /etc/shadow -k shadow-file -p rwxa
+    #aideinit
     add-crontab "0 5 * * * /usr/bin/aide.wrapper --config /etc/aide/aide.conf --check"
     apt -y autoremove
 }
@@ -804,12 +804,12 @@ EOF
     fi
 }
 cfg-dns() {
-    cat <<'EOF' >/etc/systemd/resolved.conf
-[Resolve]
-DNS=8.8.8.8 8.8.4.4
-EOF
-    systemctl daemon-reload
-    systemctl restart systemd-{networkd,resolved}
+#    cat <<'EOF' >/etc/systemd/resolved.conf
+#[Resolve]
+#DNS=8.8.8.8 8.8.4.4
+#EOF
+#    systemctl daemon-reload
+#    systemctl restart systemd-{networkd,resolved}
     cat <<'EOF' >/etc/resolv.conf
 nameserver 8.8.8.8
 nameserver 8.8.4.4
