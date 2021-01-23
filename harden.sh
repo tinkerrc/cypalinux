@@ -803,7 +803,7 @@ EOF
     fi
 }
 cfg-dns() {
-    cat <<'EOF' >/etc/systemd/resolved.conf >
+    cat <<'EOF' >/etc/systemd/resolved.conf
 [Resolve]
 DNS=8.8.8.8 8.8.4.4
 EOF
