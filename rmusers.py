@@ -23,15 +23,16 @@ with open(unchecked_file, "r") as f:
 
 with open(unauthed_file, "w") as f:
     for user in unchecked:
-        if user not in authed:
-            uid = str(getpwnam(user).pw_uid)
-            answer = input("Found unauthorized user " + user
-                           + " with UID " + uid +
-                           ", remove? [y/N] ").lower()
-            if answer == 'y':
-                subprocess.call(['deluser', "--remove-home", user])
-                f.write(user + "\n")
-                print("User '" + user + "' (" + uid + ") removed")
-                continue
-            print("User '" + user + "' (" + uid + ") not removed")
+        #if user not in authed:
+        #    uid = str(getpwnam(user).pw_uid)
+        #    answer = input("Found unauthorized user " + user
+        #                   + " with UID " + uid +
+        #                   ", remove? [y/N] ").lower()
+        #    if answer == 'y':
+        #        subprocess.call(['deluser', "--remove-home", user])
+        #        f.write(user + "\n")
+        #        print("User '" + user + "' (" + uid + ") removed")
+        #        continue
+        #    print("User '" + user + "' (" + uid + ") not removed")
         subprocess.call(['chage', '-M15', '-m6', '-W7', '-I5', user])
+        # chage -M15 -m6 -W7 -I5

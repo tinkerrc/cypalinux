@@ -719,6 +719,7 @@ cfg-mysql() {
         systemctl restart mysql
     elif [[ $use_mysql =~ ^[Nn]$ ]]; then
         #apt -y autoremove mysql\*
+        echo
     else
         echo "No action taken"
     fi
