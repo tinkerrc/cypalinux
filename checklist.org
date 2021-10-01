@@ -15,7 +15,7 @@ For all 'S: ' headings, restart the service after changing config
 - potential packages to remove:
   + exim4
 - check quarantined files in ~$BACKUP/quarantine~
-- check crons
+- check crontabs
   + /var/spool/cron/crontabs
   + /etc/anacrontab
   + /var/spool/anacrontab
@@ -53,6 +53,8 @@ comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-
 apt list --installed | grep -vxf "$BASE/rc/pkgorig.txt"
   #+end_src
 * Normal
+- Add a ~/etc/motd~
+- Add a SSH warning banner
 - check services
   : service --status-all | sort
   [+] = running

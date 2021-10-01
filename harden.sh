@@ -5,11 +5,13 @@ set -u
 #   | Walnut HS Cyber Security Club  |
 #   ==================================
 
+# Save time by not typing sudo all the time
 if [ ! "$(whoami)" = "root" ]; then
     echo "Please try again with root privileges..."
     return 1
 fi
 
+# Make sure the script was sourced, not run directly
 if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
     echo "Invoke harden to secure the machine"
 else
@@ -19,13 +21,16 @@ fi
 
 set -a # export all functions and variables
 unalias -a
+
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
 DATA="$BASE/flags"
 BACKUP="/backup"
 DEBIAN_FRONTEND=noninteractive
+
 mkdir -p $DATA
 mkdir -p $BACKUP
+
 if [[ -L /root/.bash_history ]]; then
     unlink /root/.bash_history
     echo '' > /root/.bash_history
@@ -57,7 +62,7 @@ harden-impl() {
     stg-fast
     stg-modules
 
-    #apt autoremove
+    apt -y autoremove
     echo "The main script is finished. Consider invoking 'scan'."
 
     bash
@@ -88,6 +93,7 @@ basic-recon() {
     pkgchk bind9 named
     pkgchk nginx nginx
     pkgchk postgresql postgresql
+
     if [ -d /var/www ]; then
         echo "/var/www found"
     else
@@ -111,7 +117,6 @@ basic-recon() {
             echo "Duplicate GID ($2): ${groups}"
         fi
     done
-
 
     cat /etc/passwd | cut -f1 -d":" | sort -n | uniq -c | while read x ; do
         [ -z "${x}" ] && break
@@ -432,6 +437,10 @@ restrict-cron() {
     echo "Done!"
 }
 fix-file-perms() {
+    # TODO: set owner for /etc/ also?
+    # 110 100 000
+    # 6   4   0
+    # rw- r-- ---
     chmod -R o-w /etc
     chown -R root:root /etc/default
     chmod 644 /etc/default/grub
@@ -488,7 +497,7 @@ fix-file-perms() {
     chmod 664 /etc/fstab
     chown root:root /etc/fstab
     chmod 644 /etc/bash.*
-    chown root:root /etc/bash.* 
+    chown root:root /etc/bash.*
     chmod 400 /etc/sudoers
     chown root:root /etc/sudoers
     chmod 755 /etc/sudoers.d
@@ -535,22 +544,23 @@ audit-pkgs() {
     prelink -ua
 
     # Hacking tools / backdoors
-    #local banned=(hydra\* frostwire vuze nmap zenmap john\* netcat\* medusa vino ophcrack aircrack-ng fcrackzip nikto\* iodine kismet ayttm empathy logkeys)
-    ## Unnecessary packages
-    #banned+=(build-essential prelink mintest rsync snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap telnet\* ldap-\* tightvncserver ircd\* znc sqwebmail cyrus-\* dovecot\*)
-    #banned+=()
+    local banned=(hydra\* frostwire vuze nmap zenmap john\* medusa vino ophcrack aircrack-ng fcrackzip nikto\* iodine kismet logkeys)
+    # Unnecessary packages
+    banned+=(ayttm empathy)
+    banned+=(build-essential prelink mintest rsync snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap telnet\* ldap-\* tightvncserver ircd\* znc sqwebmail cyrus-\* dovecot\*)
+    banned+=()
 
-    #for pkg in "${banned[@]}"; do
-    #    apt -y purge $pkg
-    #done
+    for pkg in "${banned[@]}"; do
+        apt -y purge $pkg
+    done
 
     apt -y install tcpd apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp
-    #aa-enforce /etc/apparmor.d/*
-    #auditctl -e 1
-    #auditctl -w /etc/shadow -k shadow-file -p rwxa
-    #aideinit
+    aa-enforce /etc/apparmor.d/*
+    auditctl -e 1
+    auditctl -w /etc/shadow -k shadow-file -p rwxa
+    aideinit
     add-crontab "0 5 * * * /usr/bin/aide.wrapper --config /etc/aide/aide.conf --check"
-    #apt -y autoremove
+    apt -y autoremove
 }
 cfg-auditd() {
     mkdir -p /etc/audit
@@ -707,7 +717,7 @@ cfg-mysql() {
     if [[ $use_mysql =~ ^[Yy]$ ]]; then
         apt install -y mysql-server
         cp -r /etc/mysql "$BACKUP"
-        echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database" > /etc/mysql/mysql.conf.d/mysqld.cnf
+        echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database\nskip-networking" > /etc/mysql/mysql.conf.d/mysqld.cnf
         echo -e "[mysql]\nlocal-infile=0" > /etc/mysql/conf.d/mysql.cnf
         chmod -R root:root /etc/mysql
         systemctl restart mysql
