@@ -372,8 +372,8 @@ firewall() {
     cp /etc/ufw/sysctl.conf "$BACKUP" 2>/dev/null
     cat "$BASE/rc/ufw-sysctl.conf" > /etc/ufw/sysctl.conf
     chmod 644 /etc/ufw/sysctl.conf
-    ufw enable
     ufw --force reset
+    ufw enable
     ufw logging high
     ufw default deny incoming
     ufw default allow outgoing
@@ -546,8 +546,9 @@ audit-pkgs() {
         apt -y purge $pkg
     done
 
-    apt -y install tcpd apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp
+    apt -y install tcpd software-properties-gtk auditd audispd-plugins ntp
     # TODO: test
+    # apt -y apparmor apparmor-profiles apparmor-utils aide aide-common clamav rkhunter chkrootkit 
     #aa-enforce /etc/apparmor.d/*
     #auditctl -e 1
     #auditctl -w /etc/shadow -k shadow-file -p rwxa
