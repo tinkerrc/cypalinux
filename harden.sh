@@ -51,12 +51,11 @@ harden-impl() {
         exit 1
     fi
 
-    todo "Run 'setxkbmap -option caps:swapescape' as a regular user (optional)"
-
+    todo "Run 'setxkbmap -option caps:swapescape' as a regular user"
+    todo "Launch two root shells in another terminal in case something goes wrong"
+    todo "Change default user password to 'password'"
 
     basic-recon | tee "$BASE/recon"
-    todo "Launch a root shell in another terminal in case something goes wrong"
-
 
     stg-config
     stg-fast
@@ -69,7 +68,7 @@ harden-impl() {
 }
 
 pkgchk() {
-    if (dpkg-query -W -f='${Status}' $1 2>/dev/null | grep 'ok installed' &>/dev/null); then
+    if (dpkg-query -W -f='${Status}' $1 2>/dev/null | grep 'install ok installed' &>/dev/null); then
         if (($# > 1)); then
             echo -e "\033[0;35;1;4m>>> $1 is INSTALLED and $2 is $(systemctl is-active $2 2>/dev/null)\033[0m"
         else
@@ -93,6 +92,7 @@ basic-recon() {
     pkgchk bind9 named
     pkgchk nginx nginx
     pkgchk postgresql postgresql
+    pkgchk postfix postfix
 
     if [ -d /var/www ]; then
         echo "/var/www found"
@@ -161,13 +161,12 @@ stg-config() {
 
     read -n 1 -rp "Is bind9 a critical service? [y/n/I]" use_bind9
     echo "Configuration complete."
-    echo "The script will start in 5 seconds."
-    sleep 5
+    read -p "Press [ENTER] to start"
 }
 stg-fast() {
     install-apt-src
     backup
-    ensure-vim
+    install-deps
     cfg-dm
     cfg-unattended-upgrades
     cfg-sshd
@@ -179,11 +178,9 @@ stg-fast() {
     cfg-fail2ban
     restrict-cron
     fix-file-perms
-    #audit-pkgs
-    #cfg-auditd
-    #cfg-grub
-
-    # remove support for unnecessary fs
+    audit-pkgs
+    cfg-auditd
+    cfg-grub
 }
 stg-modules() {
     audit-users
@@ -202,22 +199,40 @@ stg-modules() {
 # @helper
 # ====================
 
+red="\x1b[38;2;255;23;68m"
+green="\x1b[38;2;0;230;118m"
+gray="\x1b[38;2;189;189;189m"
+purple="\x1b[38;2;234;128;252m"
+reset="\x1b[0m"
+
+echored() {
+    echo -e "$red$*$reset"
+}
+echogreen() {
+    echo -e "$green$*$reset"
+}
+echogray() {
+    echo -e "$gray$*$reset"
+}
+echopurp() {
+    echo -e "$purple$*$reset"
+}
 todo () {
     # Follow the instruction; might have to leave terminal
-    echo -e "\033[0;31;1;4mTODO:\033[0m $*"
+    echo -e "${red}TODO:$reset $*"
     read -n 1 -rp "Press [ENTER] when you finish"
 }
 ready() {
     # Wait for user to be ready
     if [ "$*" != "" ]; then
-        echo -e "\033[0;35;1;4mREADY:\033[0m $*"
+        echo -e "${purple}READY:$reset $*"
     fi
     read -n 1 -rp "Press [ENTER] when you are ready"
 }
 act() {
     # Tell the user to do something manually
     if [ "$*" != "" ]; then
-        echo -e "\033[0;35;1;4mACT:\033[0m $*"
+        echo -e "${}ACT:\033[0m $*"
     fi
 }
 do-task() {
@@ -250,13 +265,17 @@ restart-sshd() {
 # ====================
 
 install-apt-src() {
+    local sources=""
     if (lsb_release -a 2>/dev/null | grep -q 16.04); then
-        cat "$BASE/rc/sources.list.16" > /etc/apt/sources.list
+        sources="$BASE/rc/sources.list.16"
     elif (lsb_release -a 2>/dev/null | grep -q 18.04); then
-        cat "$BASE/rc/sources.list.18" > /etc/apt/sources.list
-    else
-        cat "$BASE/rc/sources.list.9" > /etc/apt/sources.list
+        sources="$BASE/rc/sources.list.18"
+    elif (lsb_release -a 2>/dev/null | grep -q 'Debian 9'); then
+        sources="$BASE/rc/sources.list.9"
+    elif (lsb_release -a 2>/dev/null | grep -q 'Debian 10'); then
+        sources="$BASE/rc/sources.list.10"
     fi
+    cat "$sources" > /etc/apt/sources.list
     apt-key update -y
     apt update -y
 }
@@ -267,7 +286,7 @@ backup() {
     cp -a /etc "$BACKUP"
     cp -a /var "$BACKUP"
 }
-ensure-vim() {
+install-deps() {
     if ! which vim &>/dev/null; then
         echo "Installing vim"
         apt install -y vim &>/dev/null
@@ -275,41 +294,16 @@ ensure-vim() {
     else
         echo "Vim is already installed"
     fi
+    apt install -y gawk
 }
 cfg-dm() {
     if [ -d /etc/lightdm ]; then
-        echo > "$DATA/lightdmconf" # clear file
-        while read -r line
-        do
-            if [[ ! $line =~ ^allow-guest=[a-z]+ ]]; then
-                echo "$line" >> "$DATA/lightdmconf"
-            fi
-        done < <(cat /etc/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf 2>/dev/null)
-        {
-            echo "[Seat:*]"
-            echo "allow-guest=false"
-            echo "greeter-hide-users=true"
-            echo "greeter-show-manual-login=true"
-            echo "autologin-guest=false"
-        } >> "$DATA/lightdmconf"
-        cat "$DATA/lightdmconf" > /etc/lightdm/lightdm.conf
-        cat "$DATA/lightdmconf" > /usr/share/lightdm/lightdm.conf.d/50-ubuntu.conf
+        cat "$BASE/rc/lightdm.conf" > /etc/lightdm/lightdm.conf
     fi
-    sed -i 's/^.*disable-user-list.*$/disable-user-list=true/' /etc/gdm3/greeter.dconf-defaults
-    sed -i 's:^.*\[org/gnome/login-screen\].*$:[org/gnome/login-screen]:' /etc/gdm3/greeter.dconf-defaults
-#    cat <<'EOF' > /etc/dconf/profile/gdm
-#user-db:user
-#system-db:gdm
-#file-db:/usr/share/gdm/greeter-dconf-defaults
-#EOF
-#
-#    cat <<'EOF' > /etc/dconf/db/gdm.d/00-login-screen
-#[org/gnome/login-screen]
-## Do not show the user list
-#disable-user-list=true
-#EOF
-
-    dconf update
+    if [ -d /etc/gdm3 ]; then
+        sed -i 's/^.*disable-user-list.*$/disable-user-list=true/' /etc/gdm3/greeter.dconf-defaults
+        sed -i 's:^.*\[org/gnome/login-screen\].*$:[org/gnome/login-screen]:' /etc/gdm3/greeter.dconf-defaults
+    fi
 }
 cfg-unattended-upgrades() {
     echo "Installing unattended-upgrades..."
@@ -320,6 +314,7 @@ cfg-unattended-upgrades() {
     local file_uud="50unattended-upgrades"
     cat "$BASE/rc/$file_pdc" > "$dir/$file_pdc"
     cat "$BASE/rc/$file_uud" > "$dir/$file_uud"
+    cat "$BASE/rc/$file_uud" > "$dir/20auto-upgrades"
 }
 cfg-sshd() {
     if ! [ -x /usr/bin/sshd ]; then
@@ -333,13 +328,9 @@ cfg-sshd() {
     echo "New sshd_config applied"
 }
 audit-fs() {
-    #systemctl disable autofs
-    #echo "tmpfs      /dev/shm    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
-    #echo "tmpfs      /tmp        tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
-    #echo "tmpfs      /var/tmp    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
-    #mount -o remount,nodev /tmp
-    #mount -o remount,nodev /var/tmp
-    #mount -o remount,nodev /dev/shm
+    echo "tmpfs      /dev/shm    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    echo "tmpfs      /tmp        tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
+    echo "tmpfs      /var/tmp    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
     local fss=(freevxfs jffs2 hfs hfsplus udf)
     for fs in "${fss[@]}"; do
         echo "install $fs /bin/true" >> /etc/modprobe.d/$fs.conf
@@ -360,7 +351,7 @@ audit-fs() {
     mkdir -p "$BACKUP/quarantine"
     locate -0 -i --regex \
         "^/home/.*\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
-        tee "$BASE/banned_files" | xargs -0 -t mv -t "$BACKUP/quarantine" || echo "Couldn't remove files"
+        grep -Ev '.config|.local|.cache|Wallpaper' | tee "$BASE/banned_files" | xargs -0 -t mv -t "$BACKUP/quarantine" || echo "Couldn't remove files"
     locate -0 -i --regex \
         "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
         grep -Ev '^(/usr|/var/lib)' | tee "$BASE/sus_files"
@@ -372,6 +363,9 @@ firewall() {
     echo "Installing..."
     apt install -y ufw iptables
     chmod 751 /lib/ufw
+    cp /etc/ufw/sysctl.conf "$BACKUP" 2>/dev/null
+    cat "$BASE/rc/ufw-sysctl.conf" > /etc/ufw/sysctl.conf
+    chmod 644 /etc/ufw/sysctl.conf
     ufw enable
     ufw --force reset
     ufw logging high
@@ -387,21 +381,17 @@ firewall() {
     echo "Allow   :  SSH"
     echo "Reject  :  Telnet, 111, 555, 2049"
     ufw status verbose
-    if [ -f /etc/ufw/sysctl.conf ]; then
-        cp /etc/ufw/sysctl.conf "$BACKUP"
-        sed 's:\.:/:g' "$BASE/rc/sysctl.conf" > /etc/ufw/sysctl.conf
-    fi
 }
 cfg-sys() {
     cat "$BASE/rc/sysctl.conf" > /etc/sysctl.conf
     sysctl -e -p /etc/sysctl.conf
-    grep "hard core" /etc/security/limits.conf /etc/security/limits.d/*
     sed -i 's/.*hard core.*//' /etc/security/limits.conf
     echo '* hard core 0' > /etc/security/limits.conf
     echo "/etc/sysctl.conf has been installed"
 }
 cfg-sudoer() {
     cp /etc/sudoers{,.bak}
+    mv /etc/sudoers.d/* "$BACKUP"
     cat "$BASE/rc/sudoers" > /etc/sudoers
     echo "Sudoers audit complete"
 }
@@ -428,7 +418,6 @@ restrict-cron() {
     echo "Backing up crontabs just to be sure"
     cp -r /var/spool/cron/ "$BACKUP/quarantine"
     echo "Setting allowed cron/at users to root"
-    crontab -r # reset crontabs
     # only root can use cron & at
     echo "root" > /etc/cron.allow
     echo "root" > /etc/at.allow
@@ -441,6 +430,7 @@ fix-file-perms() {
     # 110 100 000
     # 6   4   0
     # rw- r-- ---
+    chown root:root /etc
     chmod -R o-w /etc
     chown -R root:root /etc/default
     chmod 644 /etc/default/grub
@@ -532,8 +522,6 @@ add-crontab() {
     crontab "$DATA/crontab"
 }
 audit-pkgs() {
-    disnow avahi-daemon
-    disnow cups
     disnow nfs-server
     disnow rpcbind
     disnow dovecot
@@ -546,26 +534,26 @@ audit-pkgs() {
     # Hacking tools / backdoors
     local banned=(hydra\* frostwire vuze nmap zenmap john\* medusa vino ophcrack aircrack-ng fcrackzip nikto\* iodine kismet logkeys)
     # Unnecessary packages
-    banned+=(ayttm empathy)
-    banned+=(build-essential prelink mintest rsync snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap telnet\* ldap-\* tightvncserver ircd\* znc sqwebmail cyrus-\* dovecot\*)
-    banned+=()
+    banned+=(empathy prelink minetest snmp\* nfs-\* rsh-\*client talk squid nis rsh-\* talk portmap ldap-\* tightvncserver ircd\* znc sqwebmail cyrus-\* dovecot\*)
 
     for pkg in "${banned[@]}"; do
         apt -y purge $pkg
     done
 
     apt -y install tcpd apparmor apparmor-profiles apparmor-utils clamav rkhunter chkrootkit software-properties-gtk auditd audispd-plugins aide aide-common ntp
-    aa-enforce /etc/apparmor.d/*
-    auditctl -e 1
-    auditctl -w /etc/shadow -k shadow-file -p rwxa
-    aideinit
-    add-crontab "0 5 * * * /usr/bin/aide.wrapper --config /etc/aide/aide.conf --check"
+    # TODO: test
+    #aa-enforce /etc/apparmor.d/*
+    #auditctl -e 1
+    #auditctl -w /etc/shadow -k shadow-file -p rwxa
+    #aideinit
+    #add-crontab "0 5 * * * /usr/bin/aide.wrapper --config /etc/aide/aide.conf --check"
     apt -y autoremove
 }
 cfg-auditd() {
-    mkdir -p /etc/audit
-    cat "$BASE/rc/audit.rules" > /etc/audit/audit.rules
-    systemctl reload auditd
+    # TODO: test
+    #mkdir -p /etc/audit
+    #cat "$BASE/rc/audit.rules" > /etc/audit/audit.rules
+    #systemctl reload auditd
 }
 cfg-grub() {
     cat <<EOF >/etc/grub.d/40_custom
@@ -581,9 +569,12 @@ EOF
 }
 audit-users() {
     usermod -g 0 root
+    echo 'Change passwords (might take a while)...'
     sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' "$DATA/auth" | chpasswd
+    echo 'Change passwords (might take a while)... Done'
     awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
     python3 "$BASE/rmusers.py" "$DATA/auth" "$DATA/check" "$DATA/unauth"
+    gawk -i inplace -F: '$3 != 0 || ($3 == 0 && $1 == "root") {print $0}' /etc/passwd
     for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do
         if [ $user != "root" ]; then
             usermod -L $user
@@ -602,7 +593,8 @@ audit-users() {
 cfg-ftp() {
     if [[ $use_pureftpd =~ ^[Nn]$ ]]; then
         echo "Removing Pure-FTPD"
-        #apt autoremove -y --purge pure-ftpd
+        disnow pure-ftpd
+        apt -y remove pure-ftpd
     else
         ufw allow ftp
         ufw allow ftps
@@ -639,7 +631,8 @@ cfg-ftp() {
 
     if [[ $use_vsftpd =~ ^[Nn]$ ]]; then
         echo "Removing VSFTPD"
-        #apt autoremove --purge vsftpd
+        disnow vsftpd
+        apt -y remove vsftpd
     else
         ufw allow ftp
         ufw allow ftps
@@ -660,7 +653,8 @@ cfg-ftp() {
 
     if [[ $use_proftpd =~ ^[Nn]$ ]]; then
         echo "Removing Pro-FTPD"
-        #apt autoremove --purge proftpd
+        disnow proftpd
+        apt -y remove proftpd
     else
         ufw allow ftp
         ufw allow ftps
@@ -682,35 +676,35 @@ cfg-ftp() {
 }
 cfg-apache() {
     if [[ $use_apache =~ ^[^Yy]$ ]]; then
-        #apt autoremove -y apache2\* libapache2\*
-        return 0
+        apt -y remove apache2
+    else
+        apt install -y apache2 libapache2-mod-{security2,evasive,php}
+        echo "Configuring apache2"
+        cp /etc/apache2/apache2.conf{,.bak}
+        cat "$BASE/rc/apache2.conf" > /etc/apache2/apache2.conf
+        cat "$BASE/rc/wordpress.conf" > /etc/apache2/sites-available/wordpress.conf
+        cat "$BASE/rc/security.conf" > /etc/apache2/conf-available/security.conf
+        cat "$BASE/rc/modsecurity.conf" > /etc/modsecurity/modsecurity.conf
+        cat "$BASE/rc/crs-setup.conf" > /usr/share/modsecurity-crs/crs-setup.conf
+        cat "$BASE/rc/security2.conf" > /etc/apache2/mods-available/security2.conf
+        chown -R root:root /etc/apache2
+        chmod 755 /etc/apache2
+        chmod -R o-r /etc/apache2
+        chmod -R 750 /etc/apache2/bin
+        chmod -R 750 /etc/apache2/conf
+        ln -s /usr/share/wordpress /var/www/html/wordpress
+        a2enconf security
+        a2dissite 000-default
+        a2ensite wordpress
+        a2enmod rewrite security2 evasive headers unique_id
+        a2dismod -f include imap info userdir autoindex dav dav_fs
+        mkdir -p /var/cache/modsecurity/uploads
+        chmod -R 750 /var/cache/modsecurity
+        ufw allow http
+        ufw allow https
+        systemctl reload apache2
+        echo "Successfully configured Apache2"
     fi
-    apt install -y apache2 libapache2-mod-{security2,evasive,php}
-    echo "Configuring apache2"
-    cp /etc/apache2/apache2.conf{,.bak}
-    cat "$BASE/rc/apache2.conf" > /etc/apache2/apache2.conf
-    cat "$BASE/rc/wordpress.conf" > /etc/apache2/sites-available/wordpress.conf
-    cat "$BASE/rc/security.conf" > /etc/apache2/conf-available/security.conf
-    cat "$BASE/rc/modsecurity.conf" > /etc/modsecurity/modsecurity.conf
-    cat "$BASE/rc/crs-setup.conf" > /usr/share/modsecurity-crs/crs-setup.conf
-    cat "$BASE/rc/security2.conf" > /etc/apache2/mods-available/security2.conf
-    chown -R root:root /etc/apache2
-    chmod 755 /etc/apache2
-    chmod -R o-r /etc/apache2
-    chmod -R 750 /etc/apache2/bin
-    chmod -R 750 /etc/apache2/conf
-    ln -s /usr/share/wordpress /var/www/html/wordpress
-    a2enconf security
-    a2dissite 000-default
-    a2ensite wordpress
-    a2enmod rewrite security2 evasive headers unique_id
-    a2dismod -f include imap info userdir autoindex dav dav_fs
-    mkdir -p /var/cache/modsecurity/uploads
-    chmod -R 750 /var/cache/modsecurity
-    ufw allow http
-    ufw allow https
-    systemctl reload apache2
-    echo "Successfully configured Apache2"
 }
 cfg-mysql() {
     ufw deny mysql
@@ -728,35 +722,35 @@ cfg-mysql() {
         todo "check if users have the right privileges"
         systemctl restart mysql
     elif [[ $use_mysql =~ ^[Nn]$ ]]; then
-        #apt -y autoremove mysql\*
-        echo
+        disnow mysql
+        apt -y remove mysql
     else
         echo "No action taken"
     fi
 }
 cfg-php() {
     if [[ $use_php =~ ^[^Yy]$ ]]; then
-        #apt autoremove -y php\*
-        return 0
+        apt remove -y php
+    else
+        apt install -y php{,-mysql,-cli,-cgi,-gd}
+        cat "$BASE/rc/php.ini" > /etc/php/7.0/cli/php.ini
+        php --ini
+        chown -R root:root /etc/php
     fi
-    apt install -y php{,-mysql,-cli,-cgi,-gd}
-    cat "$BASE/rc/php.ini" > /etc/php/7.0/cli/php.ini
-    php --ini
-    chown -R root:root /etc/php
 }
 cfg-wordpress() {
     if [[ $use_wordpress =~ ^[^Yy]$ ]]; then
-        #apt autoremove -y wordpress\*
-        return 0
+        apt remove -y wordpress
+    else
+        apt install -y wordpress
+        gzip -d /usr/share/doc/wordpress/examples/setup-mysql.gz
+        bash /usr/share/doc/wordpress/examples/setup-mysql -n wordpress localhost
+        chown -R www-data:www-data /var/www/
+        chown -R www-data /usr/share/wordpress
+        find /var/www -type d -exec chmod 775 {} \;
+        find /usr/share/wordpress -type d -exec chmod 775 {} \;
+        [[ $use_apache =~ ^[Yy]$ ]] && systemctl restart apache2
     fi
-    apt install -y wordpress
-    gzip -d /usr/share/doc/wordpress/examples/setup-mysql.gz
-    bash /usr/share/doc/wordpress/examples/setup-mysql -n wordpress localhost
-    chown -R www-data:www-data /var/www/
-    chown -R www-data /usr/share/wordpress
-    find /var/www -type d -exec chmod 775 {} \;
-    find /usr/share/wordpress -type d -exec chmod 775 {} \;
-    [[ $use_apache =~ ^[Yy]$ ]] && systemctl restart apache2
 }
 cfg-bind9() {
     if [[ $use_bind9 =~ ^[Yy]$ ]]; then
@@ -766,7 +760,7 @@ cfg-bind9() {
         chmod -R o-r /etc/bind
     elif [[ $use_bind9 =~ ^[Nn]$ ]]; then
         disnow named
-        #apt -y purge bind9
+        apt -y remove bind9
     else
         echo "Will not remove bind9"
     fi
@@ -778,7 +772,7 @@ cfg-nginx() {
         ufw enable https
     elif [[ $use_nginx =~ ^[Nn]$ ]]; then
         disnow nginx
-        #apt -y purge nginx\*
+        apt -y remove nginx
     else
         echo "Will not remove nginx"
     fi
@@ -788,7 +782,7 @@ cfg-postgresql() {
         apt install -y postgresql{,-contrib}
     elif [[ $use_postgres =~ ^[Nn]$ ]]; then
         disnow postgresql
-        #apt -y purge postgresql
+        apt -y remove postgresql
     else
         echo "Will not remove postgresql"
     fi
@@ -806,11 +800,10 @@ EOF
         aa-enforce /usr/sbin/smbd
         cat /etc/apparmor.d/usr.sbin.smbd | apparmor_parser -r
         systemctl restart smbd.service nmbd.service
-
     elif [[ $use_samba =~ ^[Nn]$ ]]; then
         echo "Removing samba"
         systemctl disable --now smbd.service nmbd.service
-        #apt -y purge samba\*
+        apt -y remove samba
     else
         echo "No actions taken"
     fi
@@ -822,10 +815,6 @@ cfg-dns() {
 #EOF
 #    systemctl daemon-reload
 #    systemctl restart systemd-{networkd,resolved}
-    cat <<'EOF' >/etc/resolv.conf
-nameserver 8.8.8.8
-nameserver 8.8.4.4
-EOF
     echo "Done configuring DNS/resolved"
 }
 
