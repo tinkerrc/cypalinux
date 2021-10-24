@@ -181,7 +181,8 @@ stg-fast() {
     fix-file-perms
     audit-pkgs
     cfg-auditd
-    cfg-grub
+    # TODO: test
+    #cfg-grub
 }
 stg-modules() {
     audit-users
