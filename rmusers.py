@@ -8,25 +8,26 @@ from pwd import getpwnam
 if os.geteuid() != 0:
     sys.exit('You must be root')
 
-data_dir = sys.argv[1]
-auth_file = os.path.join(data_dir, "auth")
-unchecked_file = os.path.join(data_dir, "check")
-unauthed_file = os.path.join(data_dir, "unauth")
+data_dir = os.getenv("DATA") or sys.argv[1]
+authorized_users_file = os.path.join(data_dir, "authorized_users")
+existing_users_file = os.path.join(data_dir, "existing_users")
+unauthed_file = os.path.join(data_dir, "unauthorized_users")
 
-authed = []
-with open(auth_file, "r") as f:
-    authed = list(filter(None, f.read().split(sep='\n')))
+authorized_users = []
+with open(authorized_users_file, "r") as f:
+    authorized_users = list(filter(None, f.read().split(sep='\n')))
 
-unchecked = []
-with open(unchecked_file, "r") as f:
-    unchecked = list(filter(None, f.read().split(sep='\n')))
+existing_users = []
+with open(existing_users_file, "r") as f:
+    existing_users = list(filter(None, f.read().split(sep='\n')))
 
 with open(unauthed_file, "w") as f:
-    for user in unchecked:
-        if user not in authed:
+    for user in existing_users:
+        if user not in authorized_users:
             uid = str(getpwnam(user).pw_uid)
             subprocess.call(['deluser', "--remove-home", user])
             f.write(user + "\n")
             print("User " + user + " (" + uid + ") removed")
-        subprocess.call(['chage', '-M15', '-m6', '-W7', '-I5', user])
-        # chage -M15 -m6 -W7 -I5
+        else:
+            subprocess.call(['chage', '-M15', '-m6', '-W7', '-I5', user])
+            # chage -M15 -m6 -W7 -I5

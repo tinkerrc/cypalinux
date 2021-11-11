@@ -41,10 +41,10 @@ fi
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
-DATA="$BASE/flags"
+DATA="/cypa_data"
 RC="$BASE/rc"
 OS="$RC/$VER"
-BACKUP="/backup"
+BACKUP="/cypa_backup"
 DEBIAN_FRONTEND=noninteractive
 
 if ! [[ -f "$OS/sources.list" ]]; then
@@ -170,25 +170,18 @@ basic-recon() {
 
 stg-config() {
     notify "===== Configure ====="
-    ready "Enter a list of authorized users"
-    vim "$DATA/auth"
+    ready "Enter a list of ALL authorized users (incl. admins)"
+    vim "$DATA/authorized_users"
 
-    read -rp "Is SSH a critical service [y/N]" use_ssh
-    read -rp "Is Apache a critical service? [y/N]" use_apache
-    read -rp "Is MySQL a critical service? [y/N]" use_mysql
-    read -rp "Is PHP a critical service? [y/N]" use_php
-    read -rp "Is Wordpress a critical service? [y/N]" use_wordpress
-    read -rp "Is postgresql a critical service? [y/N]" use_postgres
+    cp -f "$BASE/config" "$DATA/config"
+    ready "Edit config (delete unneeded lines)"
+    vim "$DATA/config"
 
-    read -rp "Is nginx a critical service? [y/N]" use_nginx
+    ready "Enter a list of authorized administrators ONLY"
+    vim "$DATA/authorized_sudoers"
 
-    read -rp "Is Pure-FTPD a critical service? [y/N]" use_pureftpd
-    read -rp "Is VSFTPD a critical service? [y/N]" use_vsftpd
-    read -rp "Is Pro-FTPD a critical service? [y/N]" use_proftpd
-    read -rp "Is Samba a critical service? [y/N]" use_samba
-
-    read -rp "Is bind9 a critical service? [y/N]" use_bind9
-    notify "Configuration complete."
+    autologin_user=""
+    read -rp "What is the name of the autologin user? " autologin_user
     read -p "Press [ENTER] to start"
 }
 stg-fast() {
@@ -235,6 +228,9 @@ purple="\x1b[38;2;234;128;252m"
 orange="\x1b[38;2;255;61;0m"
 reset="\x1b[0m"
 
+use() {
+    grep "$DATA/config" "$1"
+}
 echogreen() {
     echo -e "$green$*$reset"
 }
@@ -333,6 +329,7 @@ backup() {
 }
 install-deps() {
     apti vim neovim gawk unattended-upgrades mlocate findutils ufw iptables libpam-modules libpam-cracklib libpam-pwquality fail2ban tcpd software-properties-gtk ntp
+    [[ -x /usr/bin/nvim ]] && alias vim="/usr/bin/nvim" || alias nvim="/usr/bin/vim"
 }
 cfg-dm() {
     if [ -d /etc/lightdm ]; then
@@ -352,7 +349,7 @@ cfg-unattended-upgrades() {
     cat "$RC/50unattended-upgrades" > "$dir/20auto-upgrades"
 }
 cfg-sshd() {
-    if [[ $use_ssh =~ ^[Yy]+$ ]]; then
+    if [[ $use_sshd =~ ^[Yy]+$ ]]; then
         apti openssh-server
         cp /etc/ssh/sshd_config{,.bak}
         cat "$RC/sshd_config" > /etc/ssh/sshd_config
@@ -393,10 +390,11 @@ audit-fs() {
 firewall() {
     notify "Installing..."
     chmod 751 /lib/ufw
-    cp /etc/ufw/sysctl.conf "$BACKUP" 2>/dev/null
-    cat "$RC/ufw-sysctl.conf" > /etc/ufw/sysctl.conf
     chmod 644 /etc/ufw/sysctl.conf
     ufw --force reset
+
+    cp /etc/ufw/sysctl.conf "$BACKUP" 2>/dev/null
+    cat "$RC/ufw-sysctl.conf" > /etc/ufw/sysctl.conf
     ufw enable
     ufw logging high
     ufw default deny incoming
@@ -599,11 +597,16 @@ EOF
 }
 audit-users() {
     usermod -g 0 root
+
+    # *** Change password ***
     notify 'Change passwords (might take a while)...'
-    sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' "$DATA/auth" > "$DATA/chpw"
+    sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' "$DATA/authorized_users" > "$DATA/chpw_pre"
+    grep --color=never $autologin_user "$DATA/chpw_pre" > "$DATA/chpw"
     chpasswd < "$DATA/chpw"
     notify 'Change passwords (might take a while)... Done'
-    awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/check"
+
+    # *** Remove unauthorized users and run chage on valid users ***
+    awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/existing_users"
     python3 "$BASE/rmusers.py" "$DATA"
     gawk -i inplace -F: '$3 != 0 || ($3 == 0 && $1 == "root") {print $0}' /etc/passwd
     for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do
@@ -623,7 +626,7 @@ audit-users() {
 # ====================
 
 cfg-ftp() {
-    if [[ $use_pureftpd =~ ^[^Yy]+$ ]]; then
+    if ! use pureftpd; then
         notify "Removing Pure-FTPD"
         disnow pure-ftpd
         aptr pure-ftpd
@@ -661,7 +664,7 @@ cfg-ftp() {
         systemctl restart pure-ftpd
     fi
 
-    if [[ $use_vsftpd =~ ^[^Yy]+$ ]]; then
+    if ! use vsftpd; then
         notify "Removing VSFTPD"
         disnow vsftpd
         aptr vsftpd
@@ -683,7 +686,7 @@ cfg-ftp() {
         systemctl restart vsftpd
     fi
 
-    if [[ $use_proftpd =~ ^[^Yy]+$ ]]; then
+    if ! use proftpd; then
         notify "Removing Pro-FTPD"
         disnow proftpd
         aptr proftpd
@@ -707,7 +710,7 @@ cfg-ftp() {
     fi
 }
 cfg-apache() {
-    if [[ $use_apache =~ ^[^Yy]+$ ]]; then
+    if ! use apache; then
         aptr apache2
     else
         apti apache2 libapache2-mod-{security2,evasive,php}
@@ -740,7 +743,7 @@ cfg-apache() {
 }
 cfg-mysql() {
     ufw deny mysql
-    if [[ $use_mysql =~ ^[Yy]+$ ]]; then
+    if use mysql; then
         apti mysql-server
         cp -r /etc/mysql "$BACKUP"
         echo -e "[mysqld]\nbind-address = 127.0.0.1\nskip-show-database\nskip-networking" > /etc/mysql/mysql.conf.d/mysqld.cnf
@@ -759,7 +762,7 @@ cfg-mysql() {
     fi
 }
 cfg-php() {
-    if [[ $use_php =~ ^[^Yy]+$ ]]; then
+    if ! use php; then
         aptr php
     else
         apti php{,-mysql,-cli,-cgi,-gd}
@@ -769,7 +772,7 @@ cfg-php() {
     fi
 }
 cfg-wordpress() {
-    if [[ $use_wordpress =~ ^[^Yy]+$ ]]; then
+    if ! use wordpress; then
         aptr wordpress
     else
         apti wordpress
@@ -783,11 +786,11 @@ cfg-wordpress() {
     fi
 }
 cfg-bind9() {
-    if [[ $use_bind9 =~ ^[Yy]+$ ]]; then
+    if use bind9; then
         apti bind9
         sed -i 's/^.*version\s+".*";.*/version none;/' /etc/bind/named.conf.options
         sed -i 's/^.*allow-transfer.*;.*/allow-transfer {none;};/' /etc/bind/named.conf.options
-        chmod -R o-r /etc/bind
+        chmod -R o-rwx /etc/bind
     else
         disnow named
         aptr bind9
@@ -795,7 +798,7 @@ cfg-bind9() {
 
 }
 cfg-nginx() {
-    if [[ $use_nginx =~ ^[Yy]+$ ]]; then
+    if use nginx; then
         ufw enable http
         ufw enable https
         apti nginx
@@ -805,7 +808,7 @@ cfg-nginx() {
     fi
 }
 cfg-postgresql() {
-    if [[ $use_postgres =~ ^[Yy]+$ ]]; then
+    if use postgres; then
         apti postgresql{,-contrib}
     else
         disnow postgresql
@@ -813,7 +816,7 @@ cfg-postgresql() {
     fi
 }
 cfg-samba() {
-    if [[ $use_samba =~ ^[Yy]+$ ]]; then
+    if use samba; then
         apti libpam-winbind
         sed -i 's/^.*guest ok.*$/    guest ok = no/' /etc/samba/smb.conf
         sed -i 's/^.*usershare allow guests.*$/usershare allow guests = no/' /etc/samba/smb.conf
