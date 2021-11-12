@@ -177,7 +177,7 @@ stg-config() {
     ready "Edit config (delete unneeded lines)"
     vim "$DATA/config"
 
-    ready "Enter a list of authorized administrators ONLY"
+    ready "Enter a COMMA-SEPARATED (/etc/group) list of authorized administrators ONLY "
     vim "$DATA/authorized_sudoers"
 
     autologin_user=""
@@ -506,7 +506,7 @@ fix-file-perms() {
     chown root:root /etc/login.defs
     chmod 644 /etc/host*
     chown root:root /etc/host*
-    chmod 777 /etc/resolv.conf
+    chmod 644 /etc/resolv.conf
     chown root:root /etc/resolv.conf
     chmod 644 /etc/profile
     chown root:root /etc/profile
@@ -600,8 +600,8 @@ audit-users() {
 
     # *** Change password ***
     notify 'Change passwords (might take a while)...'
-    sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' "$DATA/authorized_users" > "$DATA/chpw_pre"
-    grep --color=never $autologin_user "$DATA/chpw_pre" > "$DATA/chpw"
+    sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' "$DATA/authorized_users" > "$DATA/chpw"
+    sed -i "s/$autologin_user:Password123!/$autologin_user:password/" "$DATA/chpw"
     chpasswd < "$DATA/chpw"
     notify 'Change passwords (might take a while)... Done'
 
@@ -617,7 +617,14 @@ audit-users() {
             fi
         fi
     done
+
+    # *** Lock root ***
     passwd -l root
+
+    # *** Change sudoers ***
+    # FIXME: implement
+    #sed -i 's/'
+    
     notify "User audit complete"
 }
 
