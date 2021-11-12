@@ -177,8 +177,10 @@ stg-config() {
     ready "Edit config (delete unneeded lines)"
     vim "$DATA/config"
 
-    ready "Enter a COMMA-SEPARATED (/etc/group) list of authorized administrators ONLY "
+    ready ""
+    authorized_sudoers=""
     vim "$DATA/authorized_sudoers"
+    read -rp "Enter a COMMA-SEPARATED list of authorized admins: " authorized_sudoers
 
     autologin_user=""
     read -rp "What is the name of the autologin user? " autologin_user
@@ -622,8 +624,7 @@ audit-users() {
     passwd -l root
 
     # *** Change sudoers ***
-    # FIXME: implement
-    #sed -i 's/'
+    sed -i "s/^sudo:x:(\d+):.*$/sudo:x:\$1:$authorized_sudoers/" /etc/group
     
     notify "User audit complete"
 }
