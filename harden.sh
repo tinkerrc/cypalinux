@@ -81,7 +81,7 @@ harden-impl() {
     todo "Launch two root shells in another terminal in case something goes wrong"
     todo "Change default user password to 'password'"
 
-    basic-recon | tee "$BASE/recon"
+    basic-recon | tee "$DATA/recon"
 
     stg-config
     stg-fast
@@ -165,7 +165,7 @@ basic-recon() {
     grep -q "^shadow:[^:]*:[^:]*:[^:]+" /etc/group && notify "SHADOW GROUP HAS USERS!! REMOVE!!"
     awk -F: '($4 == "42") { print }' /etc/passwd | grep -E '.*' && notify "SHADOW GROUP HAS USERS!! REMOVE!!"
     sleep 0.5
-    todo "Read recon report above (also in $BASE/recon)"
+    todo "Read recon report above (also in \$BASE/recon)"
 }
 
 stg-config() {
@@ -379,12 +379,12 @@ audit-fs() {
     mkdir -p "$BACKUP/quarantine"
     locate -0 -i --regex \
         "^/home/.*\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
-        grep -Ev '.config|.local|.cache|Wallpaper' | tee "$BASE/banned_files" | xargs -r0 mv -t "$BACKUP/quarantine" || notify "Couldn't remove files"
+        grep -Ev '.config|.local|.cache|Wallpaper' | tee "$DATA/banned_files" | xargs -r0 mv -t "$BACKUP/quarantine" || notify "Couldn't remove files"
     locate -0 -i --regex \
         "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
-        grep -Ev '^(/usr|/var/lib)' | tee "$BASE/sus_files"
-    notify "Media files in /home are quarantined in $BACKUP/quarantine (see $BASE/banned_files)."
-    notify "Also check $BASE/sus_files"
+        grep -Ev '^(/usr|/var/lib)' | tee "$DATA/sus_files"
+    notify "Media files in /home are quarantined in \$BACKUP/quarantine (see \$DATA/banned_files)."
+    notify "Also check \$BASE/sus_files"
     sleep 2
 }
 firewall() {
@@ -437,7 +437,7 @@ cfg-common() {
 }
 cfg-fail2ban() {
     touch /etc/fail2ban/jail.local
-    cat "$RC/jail.local" > jail.local
+    cat "$RC/jail.local" > /etc/fail2ban/jail.local
     systemctl restart fail2ban || service fail2ban restart || notify "Failed to restart fail2ban"
 }
 restrict-cron() {
