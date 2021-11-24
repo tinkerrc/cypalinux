@@ -7,6 +7,7 @@ instconf $RC/security.conf /etc/apache2/conf-available/security.conf
 instconf $RC/modsecurity.conf /etc/modsecurity/modsecurity.conf
 instconf $RC/crs-setup.conf /usr/share/modsecurity-crs/crs-setup.conf
 instconf $RC/security2.conf /etc/apache2/mods-available/security2.conf
+instdir $RC/rules /etc/modsecurity/rules
 
 chown -R root:root /etc/apache2
 chmod 755 /etc/apache2

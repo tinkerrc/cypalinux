@@ -73,9 +73,15 @@ fi
 instconf() {
     install --backup -o root -g root -Dm644 $1 $2
 }
-
 instsecret() {
     install --backup -o root -g root -Dm600 $1 $2
+}
+# instdir source/config_dir dest/config_dir
+instdir() {
+    mkdir -p $2
+    pushd $1
+    find . -type f -exec install -o root -g root -Dm644 {} $2/{} \;
+    popd
 }
 
 # Logging
@@ -241,3 +247,4 @@ run-mod() {
         bash $MOD/disuse.sh
     fi
 }
+
