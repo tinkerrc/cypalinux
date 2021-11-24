@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-(echo -e "deb http://us.archive.ubuntu.com/ubuntu/ xenial main restricted\ndeb http://us.archive.ubuntu.com/ubuntu/ xenial-updates main restricted\ndeb http://us.archive.ubuntu.com/ubuntu/ xenial universe\ndeb http://us.archive.ubuntu.com/ubuntu/ xenial-updates universe\ndeb http://us.archive.ubuntu.com/ubuntu/ xenial multiverse\ndeb http://us.archive.ubuntu.com/ubuntu/ xenial-updates multiverse\ndeb http://us.archive.ubuntu.com/ubuntu/ xenial-backports main restricted universe multiverse\ndeb http://security.ubuntu.com/ubuntu xenial-security main restricted\ndeb http://security.ubuntu.com/ubuntu xenial-security universe\ndeb http://security.ubuntu.com/ubuntu xenial-security multiverse" > /etc/apt/sources.list) && apt update && apt -y install git && git clone https://github.com/oakrc/cypalinux && cd cypalinux && source harden.sh

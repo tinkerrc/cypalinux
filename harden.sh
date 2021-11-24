@@ -137,6 +137,7 @@ apti() {
     apt install -y $packages
 }
 aptr() {
+    #  TODO: identify packages to be removed using dpkg -l and not apt-cache
     local packages=""
     for i in "$@"; do 
         if ! [ -z "$(apt-cache madison $i 2>/dev/null)" ]; then
@@ -170,73 +171,30 @@ add-crontab() {
 # ====================
 # Main
 # ====================
-# TODO: move $BASE/rc/* to individual files
 
-# TODO: log failed modules and print at the end
-# TODO: allow modules to add manual todos and print them at the end of the script
-# TODO: print a list of colorcoded modules in config to distinguish active/inactive/interactive modules
+# - Modules must be able to access MOD=$BASE/mods/mod_name RC=$MOD/rc
+# - A module must have mod.sh, or if nonexistent, one or both of use.sh and
+#   disuse.sh 
+# - if the latter files exist, then the module must be considered in 03.config
+# - Modules may register packages that must be installed if module is used and
+#   removed otherwise
+# - Modules whose priority is xx (e.g., xx.lynis) can only be run manually
+#   (i.e., through run())
 
-# must export MOD=$BASE/mods/mod_name RC=$MOD/rc, and pmodule before
-# running a module
+# - Module FS layout
+#    +-- /mods/mod_name/
+#    | mods.sh         -- will be run regardless
+#    | use.sh          -- will be run if module name is kept in config
+#    | disuse.sh       -- will be run if module name is removed from config
+#    | pkgs            -- contains list of packages required by this module
+#    | is_interactive  -- mark module as interactive (may require user input)
+#    | masked          -- completely ignore this module as if it DNE
 
-# must have mod.sh, or if nonexistent, use.sh and disuse.sh 
-
-# if the latter files exist, then the module must be considered in 03.config
-
-# modules may register packages that are installed if module is used and
-# removed otherwise
-
-# modules whose priority is xx (e.g., xx.lynis) can only be run manually
-# (i.e., through run())
-
-# single module layout
-# /mods/mod_name/
-# | mods.sh         -- will be run regardless
-# | use.sh          -- will be run if module name is kept in config
-# | disuse.sh       -- will be run if module name is removed from config
-# | pkgs            -- contains list of packages associated with module
-# | is_interactive  -- mark module as interactive
-# | masked          -- completely ignore this module
-
-# /
-# /mods
-# 00.welcome
-# 01.recon
-# 02.backup
-# 03.apt-src
-# 04.install-core-deps
-# 05.config
-# 06.manage-mod-deps
-#   TODO: identify packages to be removed using dpkg -l and not apt-cache
-# 09.pms-upgrade
-# 10.users
-# 11.cron
-# 11.fs-perms
-# 11.kernel
-# 11.netsec
-# 11.unattended-upgrades
-# 15.display-manager
-# 15.filesystem
-# 20.pms-audit
-# 30.grub
-# 30.auditd
-# 30.aide
-# 30.apparmor
-
-# /mods
-# 50.sshd
-# 50.fail2ban
-# 50.pure-ftpd
-# 50.proftpd
-# 50.vsftpd
-# 50.apache
-# 50.php
-# 50.wordpress
-# 50.bind9
-# 50.nginx
-# 50.postgresql
-# 50.samba
 harden() {
+    # TODO: add more todos from discord server
+    # TODO: log failed modules and print at the end
+    # TODO: allow modules to add manual todos / checklist items and print them at the end of the script
+
     chmod +x $BASE/mods/*/*.sh
     # primoddir = $BASE/mods/??.mod_name/
     for primoddir in $BASE/mods/*/; do
