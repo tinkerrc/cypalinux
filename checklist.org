@@ -107,7 +107,7 @@ find / -type f -perm -4000
 - remove =.forward=, =.netrc=, =.rhosts= files from user home
 * When Desperate
 - check =/etc= files or dirs not owned by root (~find /etc ! -user root~)
-- check for *sh files in /etc or other dirs
+- check for ~*sh~ files in /etc or other dirs
 - check apt sources.d
 - check file permissions :/
 - check /etc/skel
