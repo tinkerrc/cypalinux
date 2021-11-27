@@ -9,13 +9,17 @@ disnow postfix
 update-rc.d postfix disable
 prelink -ua
 
-# TODO: remove nonexistent packages and don't use aptr because locally installed packages will be covered by manual inspection
 # Hacking tools / backdoors
-banned=(hydra frostwire vuze nmap zenmap john medusa vino ophcrack aircrack-ng fcrackzip nikto iodine kismet logkeys)
+banned=(hydra nmap zenmap john medusa vino ophcrack aircrack-ng fcrackzip nikto iodine kismet packit pcmpem goldeneye themole)
 # Unnecessary packages
 banned+=(empathy prelink minetest snmp nfs-kernel-server rsh-client talk squid nis talk portmap ldap-utils slapd tightvncserver inspircd ircd-hybrid ircd-irc2 ircd-ircu ngircd tircd znc sqwebmail cyrus-imapd dovecot-imapd)
 
-aptr ${banned[@]}
-aptar
+banned=(empathy prelink minetest snmp nfs-kernel-server rsh-client talk squid nis talk portmap ldap-utils slapd tightvncserver inspircd ircd-hybrid ircd-irc2 ircd-ircu ngircd tircd znc sqwebmail cyrus-imapd dovecot-imapd)
+for i in "${banned[@]}"; do
+    if ! apt-cache madison $i &>/dev/null; then
+        echo $i
+    fi
+done
 
-# TODO: move into other modules' pkglist
+apt remove -y ${banned[@]} || pwarn "Retrying removal in filtered mode" && aptr ${banned[@]} || perror "Failed to remove banned packages"
+aptar

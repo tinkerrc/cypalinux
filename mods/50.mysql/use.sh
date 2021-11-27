@@ -9,5 +9,3 @@ instconf $RC/mysql.cnf /etc/mysql/conf.d/mysql.cnf
 systemctl restart mysql && psuccess "Restarted mysql" || perror "Failed to restart mysql"
 
 # TODO: TLS or no?
-# TODO: add skip-grant-table check to checklist
-# grep -rn "skip-grant-tables" /etc/mysql

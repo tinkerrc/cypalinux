@@ -1,4 +1,3 @@
-# TODO: add checklist item: check all cron files
 cp -r /var/spool/cron/ "$BACKUP/quarantine"
 rm /var/spool/cron/crontabs/*
 psuccess "Removed all user crontabs"

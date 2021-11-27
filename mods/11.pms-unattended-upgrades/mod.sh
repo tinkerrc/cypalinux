@@ -1,5 +1,3 @@
-# TODO: add checklist item: run software-properties-gtk directly
-
 dir=/etc/apt/apt.conf.d
 mkdir -p "$dir" # should already be there
 instconf $RC/10periodic $dir/10periodic

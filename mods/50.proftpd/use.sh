@@ -1,3 +1,4 @@
+# TODO: http://www.proftpd.org/docs/howto/TLS.html
 ufw allow ftp
 ufw allow ftps
 
@@ -14,7 +15,7 @@ psuccess "Configured proftpd"
 instconf $RC/tls.conf /etc/proftpd/tls.conf
 if ! [ -f /etc/ssl/private/proftpd.key ]; then
     mkdir -p /etc/ssl/private
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/proftpd.key -out /etc/ssl/certs/proftpd.crt
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/proftpd.key -out /etc/ssl/certs/proftpd.crt -subj "/C=US/ST=California/L=Walnut/O=CyberPatriot/OU=High School Division/CN=FTP/emailAddress=test@example.com"
 fi
 chmod 700 /etc/ssl/{private,certs}
 chmod 600 /etc/ssl/private/proftpd.key

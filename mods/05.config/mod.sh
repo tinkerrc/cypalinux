@@ -1,5 +1,5 @@
 # TODO: print a list of colorcoded modules in config to distinguish active/inactive/interactive modules
-# TODO: dynamic config preset
+# FIXME: dynamic config preset
 #   when producing the dynamic config preset, also create a list
 #   of modules that are always on and append this file to
 #   $DATA/config at the end

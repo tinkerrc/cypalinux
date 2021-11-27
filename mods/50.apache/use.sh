@@ -1,12 +1,10 @@
-# TODO: manually inspect apache2 config (enabled vs disabled sites, conf, mod, etc.)
-# TODO: test
-# TODO: apache2 envvars (/etc/apache2/envvars)
 instconf $RC/apache2.conf /etc/apache2/apache2.conf
+instconf $RC/envvars /etc/apache2/envvars
 instconf $RC/security.conf /etc/apache2/conf-available/security.conf
-# NOTE: pkgs currently contain both the old and new modsecurity (older is for Debian); when mod-deps support distro version detection, change this
 instconf $RC/modsecurity.conf /etc/modsecurity/modsecurity.conf
 instconf $RC/crs-setup.conf /usr/share/modsecurity-crs/crs-setup.conf
 instconf $RC/security2.conf /etc/apache2/mods-available/security2.conf
+# TEST: see if it moves files properly
 instdir $RC/rules /etc/modsecurity/rules
 
 chown -R root:root /etc/apache2

@@ -23,4 +23,3 @@ locate -0 -i --regex \
     grep -Ev '^(/usr|/var/lib)' | tee "$DATA/sus_files"
 psuccess "Media files in /home are quarantined in \$BACKUP/quarantine (see \$DATA/banned_files)."
 pinfo "Also check \$DATA/sus_files for suspicious files"
-# TODO: add above as checklist item

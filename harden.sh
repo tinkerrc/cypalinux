@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -au
 unalias -a
+umask 027
 
 #   ==================================
 #   |     Linux Hardening Script     |
@@ -12,7 +13,7 @@ unalias -a
 # ====================
 
 # Save time by not typing sudo all the time
-if [ ! "$(whoami)" = "root" ]; then
+if [ ! "$(whoami)" = "root" -a ! "$DRYRUN" = "true" ]; then
     echo "Please try again with root privileges..."
     return 1
 fi
@@ -26,11 +27,6 @@ else
     return 1
 fi
 
-if ! [ -d "$RC" ]; then
-    notify "The resources directory is missing"
-    exit 1
-fi
-
 # ====================
 # Set up environment
 # ====================
@@ -42,12 +38,16 @@ elif (lsb_release -a 2>/dev/null | grep -q 18.04); then
     OS=u18
 elif (lsb_release -a 2>/dev/null | grep -q 20.04); then
     OS=u20
+elif (lsb_release -a 2>/dev/null | grep -q 'Debian 8'); then
+    OS=d8
 elif (lsb_release -a 2>/dev/null | grep -q 'Debian 9'); then
     OS=d9
 elif (lsb_release -a 2>/dev/null | grep -q 'Debian 10'); then
     OS=d10
 elif (lsb_release -a 2>/dev/null | grep -q 'Debian 11'); then
     OS=d11
+elif [ "$DRYRUN" = "true" ]; then
+    OS=u18
 else
     echo "Failed to identify OS version"
     return 1
@@ -55,12 +55,14 @@ fi
 
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
-DATA=$(mktemp -p /cypa/data XXXX -d)
-BACKUP="/cypa/backup"
+DATA="/cypa/data"
+BACKUP="/cypa/backup" # created by mod.backup
 ERRLOG="/cypa/errors.log"
 DEBIAN_FRONTEND=noninteractive
 
-if [[ -L /root/.bash_history ]]; then
+mkdir -p "$DATA"
+
+if [[ -L /root/.bash_history -a ! $DRYRUN = true ]]; then
     unlink /root/.bash_history
     echo '' > /root/.bash_history
 fi
@@ -89,7 +91,7 @@ red="\x1b[38;2;255;23;68m"
 green="\x1b[38;2;0;230;118m"
 blue="\x1b[38;2;0;176;255m"
 orange="\x1b[38;2;255;61;0m"
-gray="\x1b[38;2;189;189;189m"
+gray="\x1b[38;2;153;153;153m"
 purple="\x1b[38;2;234;128;252m"
 reset="\x1b[0m"
 
@@ -143,10 +145,9 @@ apti() {
     apt install -y $packages
 }
 aptr() {
-    #  TODO: identify packages to be removed using dpkg -l and not apt-cache
     local packages=""
     for i in "$@"; do 
-        if ! [ -z "$(apt-cache madison $i 2>/dev/null)" ]; then
+        if dpkg -s $1 &>/dev/null; then
             packages="$packages $i"
         fi
     done
@@ -164,7 +165,10 @@ mask() {
     touch $BASE/mods/??.${1}/masked
 }
 unmask() {
-    rm $BASE/mods/??.${1}/masked
+    rm -f $BASE/mods/??.${1}/masked
+}
+getmodname() {
+    basename $1 | cut -c 4-
 }
 
 # Cron
@@ -196,12 +200,12 @@ add-crontab() {
 #    | is_interactive  -- mark module as interactive (may require user input)
 #    | masked          -- completely ignore this module as if it DNE
 
+# runs all unmasked nonmanual modules
 harden() {
     # TODO: add more todos from discord server
-    # TODO: log failed modules and print at the end
-    # TODO: allow modules to add manual todos / checklist items and print them at the end of the script
+    # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap
+    # TODO: run dev-sec/ansible-collection-hardening (apache2, nginx, mysql, linux in general)
 
-    chmod +x $BASE/mods/*/*.sh
     # primoddir = $BASE/mods/??.mod_name/
     for primoddir in $BASE/mods/*/; do
         # primod = ??.mod_name
@@ -216,6 +220,7 @@ harden() {
         fi
     done
 }
+# runs a single unmasked module
 run-mod() {
     if [[ -z $1 ]]; then
         perror "No module name specified"
@@ -233,7 +238,7 @@ run-mod() {
 
     pmodule $mod
 
-    if [[ -f $MOD/masked ]]; then
+    if [[ -f $MOD/masked -o "$DRYRUN" = "true" ]]; then
         return
     fi
     
@@ -243,7 +248,7 @@ run-mod() {
 
     if use $mod && [[ -f $MOD/use.sh ]]; then
         bash $MOD/use.sh
-    else if ! use $mod && [[ -f $MOD/disuse.sh ]]; then
+    elif ! use $mod && [[ -f $MOD/disuse.sh ]]; then
         bash $MOD/disuse.sh
     fi
 }

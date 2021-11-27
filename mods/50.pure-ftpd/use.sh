@@ -24,7 +24,7 @@ if ! [ -f /etc/ssl/private/pure-ftpd.pem ]; then
     pinfo "Generate Diffie-Hellman Parameters"
     openssl dhparam -out /etc/ssl/private/pure-ftpd-dhparams.pem 2048
     pinfo "Generate TLS certificate and key"
-    sudo openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem
+    openssl req -x509 -nodes -days 7300 -newkey rsa:2048 -keyout /etc/ssl/private/pure-ftpd.pem -out /etc/ssl/private/pure-ftpd.pem -subj "/C=US/ST=California/L=Walnut/O=CyberPatriot/OU=High School Division/CN=FTP/emailAddress=test@example.com"
     psuccess "Configured pure-ftpd TLS"
 fi
 
@@ -32,5 +32,3 @@ chmod 700 /etc/ssl/private/
 chmod 600 /etc/ssl/private/*.pem
 
 systemctl restart pure-ftpd && psuccess "Restarted pure-ftpd" || perror "Failed to restart pure-ftpd"
-
-# TODO: add checklist item: manually inspect ftp server

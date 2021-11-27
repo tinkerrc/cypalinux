@@ -1,7 +1,3 @@
-# TODO: add checklist item: inspect nonroot files manually?
-# TODO: add checklist item: inspect root folder (or even just quarantine everything in there?)
-# TODO: move service-specific chmod/chowns out of here
-
 chown root:root /
 chmod 751 /
 
@@ -119,28 +115,25 @@ chmod 644 /etc/bash.*
 chown root:root /etc/host*
 chmod 644 /etc/host*
 
-# ===== SSH =====
-chown -R root:root /etc/ssh
-chmod 755 /etc/ssh
-
-chmod 644 /etc/ssh/*
-
-# ===== PHP =====
-chown -R root:root /etc/php
-chmod 755 /etc/php
-
 # ===== Home =====
 chown root:root /home
 chmod 755 /home
-chmod 700 /home/*
 
 chown root:root /root
 chmod 700 /root
 
-# TODO: make sure owner/group matches actual home directory name
-find /home -maxdepth 2 -mindepth 2 -name ".ssh" -type d -exec chmod 700 {} \; -print
-find /home -maxdepth 2 -mindepth 2 -name ".gnupg" -type d -exec chmod 700 {} \; -print
-find /home -maxdepth 3 -mindepth 2 -path "*.ssh*" -type f -exec chmod 600 {} \; -print
-find /home -maxdepth 3 -mindepth 2 -path "*.gnupg*" -type f -exec chmod 600 {} \; -print
+for home in /home/*/; do
+    user=$(basename $home)
+    chown -R $user:$user $home
+    chmod 700 $home
+    if [ -d $home/.ssh ]; then
+        chmod 700 $home/.ssh 
+        chmod 600 $home/.ssh/*
+    fi
+    if [ -d $home/.gnupg ]; then
+       chmod 700 $home/.gnupg
+       chmod 600 $home/.gnupg/*
+    fi
+done
 
 psuccess "Corrected common file permissions"
