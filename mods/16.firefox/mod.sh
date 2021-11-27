@@ -1,7 +1,7 @@
 for home in /home/*/; do
     user=$(basename $home)
     for profile in $home/.mozilla/firefox/*.*/; do
-        install -u $user -g $user -Dm660 $RC/user.js $profile/user.js
+        install -o $user -g $user -Dm660 $RC/user.js $profile/user.js
     done
 done
 
