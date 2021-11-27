@@ -44,7 +44,6 @@ install -o root -g root -Dm 440 $RC/sudoers /etc/sudoers
 psuccess "Installed secure sudoers config"
 
 # *** PAM config ***
-# TODO: https://deer-run.com/users/hal/linux_passwords_pam.html
 instconf $RC/common-account /etc/pam.d/common-account
 instconf $RC/common-password /etc/pam.d/common-password
 instconf $RC/common-session /etc/pam.d/common-session

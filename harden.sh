@@ -170,6 +170,9 @@ unmask() {
 getmodname() {
     basename $1 | cut -c 4-
 }
+getmodpri() {
+    basename $1 | cut -c -2
+}
 
 # Cron
 add-crontab() {
@@ -202,7 +205,7 @@ add-crontab() {
 
 # runs all unmasked nonmanual modules
 harden() {
-    # TODO: add more todos from discord server
+    # TODO: add more todos from remnote
     # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap
     # TODO: run dev-sec/ansible-collection-hardening (apache2, nginx, mysql, linux in general)
 
