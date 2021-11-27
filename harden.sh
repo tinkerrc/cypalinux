@@ -207,7 +207,7 @@ add-crontab() {
 harden() {
     # TODO: add more todos from remnote
     # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap
-    # TODO: run dev-sec/ansible-collection-hardening (apache2, nginx, mysql, linux in general)
+    # TODO: https://github.com/trimstray/the-practical-linux-hardening-guide
 
     # primoddir = $BASE/mods/??.mod_name/
     for primoddir in $BASE/mods/*/; do

@@ -1,6 +1,8 @@
 desired_pkgs=''
 undesired_pkgs=''
 
+# TODO: make pkgs a shell script instead
+
 for dir in $BASE/mods/*/; do
     if [ ! -f $dir/masked -a -f $] ; then
         if use $(getmodname $dir); then
