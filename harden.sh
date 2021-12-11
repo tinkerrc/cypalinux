@@ -11,6 +11,7 @@ umask 027
 # ====================
 # Sanity Checks
 # ====================
+DRYRUN=false
 
 # Save time by not typing sudo all the time
 if [ ! "$(whoami)" = "root" -a ! "$DRYRUN" = "true" ]; then
@@ -208,6 +209,7 @@ harden() {
     # TODO: add more todos from remnote
     # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap
     # TODO: https://github.com/trimstray/the-practical-linux-hardening-guide
+    # TODO: https://www.open-scap.org/security-policies/scap-security-guide/#install
 
     # primoddir = $BASE/mods/??.mod_name/
     for primoddir in $BASE/mods/*/; do
