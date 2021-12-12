@@ -1,6 +1,6 @@
-rm $DATA/mods.configurable
+rm -f $DATA/mods.configurable
 touch $DATA/mods.configurable
-rm $DATA/mods.always_on
+rm -f $DATA/mods.always_on
 touch $DATA/mods.always_on
 
 for dir in $BASE/mods/*/; do

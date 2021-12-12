@@ -32,9 +32,8 @@ passwd -l root
 psuccess "Locked root user"
 
 # *** Change sudoers ***
-# TEST: didn't seem to work in R2
 authorized_sudoers=$(cat $DATA/authorized_sudoers)
-sed -i "s/^sudo:x:(\d+):.*$/sudo:x:\$1:$authorized_sudoers/" /etc/group
+sed -ir "s/^sudo:x:([[:digit:]]+):.*$/sudo:x:\1:$authorized_sudoers/" /etc/group
 psuccess "Corrected sudo group members"
 
 # *** Sudo config ***
