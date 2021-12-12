@@ -8,6 +8,8 @@ umask 027
 #   | Walnut HS Cyber Security Club  |
 #   ==================================
 
+DRYRUN=false
+
 # ====================
 # Sanity Checks
 # ====================
@@ -23,7 +25,7 @@ if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
     echo "Invoke harden to secure the machine"
 else
     echo "Run 'source harden.sh' instead"
-    return 1
+    exit 1
 fi
 
 # ====================
@@ -231,12 +233,12 @@ run-mod() {
     fi
 
     local mod=$1
-    MOD=$BASE/mods/??.$mod
+    MOD=$(echo $BASE/mods/??.$mod)
     RC=$MOD/rc
 
     if [ ! -d "$MOD" ]; then
-	perror "Module $mod does not exist"
-	return 1
+        perror "Module $mod does not exist"
+        return 1
     fi
 
     pmodule $mod
