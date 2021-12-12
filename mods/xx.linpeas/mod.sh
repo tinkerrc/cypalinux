@@ -1,5 +1,5 @@
 cd "$DATA"
-if ! [[ -d $DATA/peas ]]; then
+if [ ! -d $DATA/peas ]; then
     pinfo "Acquiring script"
     git clone --depth 1 https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/ $DATA/linpeas
 fi

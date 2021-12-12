@@ -5,7 +5,7 @@ for home in /home/*/; do
     done
 done
 
-if [[ $OS = d* ]]; then
+if echo "$OS" | grep -q 'd'; then
     instconf $RC/debian_locked.js /etc/firefox-esr/firefox-esr.js
 else
     instconf $RC/locked_user.js /etc/firefox/syspref.js # older

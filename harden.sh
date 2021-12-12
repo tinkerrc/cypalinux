@@ -11,8 +11,6 @@ umask 027
 # ====================
 # Sanity Checks
 # ====================
-DRYRUN=false
-
 # Save time by not typing sudo all the time
 if [ ! "$(whoami)" = "root" -a ! "$DRYRUN" = "true" ]; then
     echo "Please try again with root privileges..."
@@ -63,7 +61,7 @@ DEBIAN_FRONTEND=noninteractive
 
 mkdir -p "$DATA"
 
-if [[ -L /root/.bash_history && ! $DRYRUN = true ]]; then
+if [ -L /root/.bash_history -a ! "$DRYRUN" = true ]; then
     unlink /root/.bash_history
     echo '' > /root/.bash_history
 fi
@@ -220,14 +218,14 @@ harden() {
         # mod = mod_name
         local mod=$(echo $primod | cut -c 4-)
 
-        if [[ $pri != xx. ]]; then
+        if [ "$pri" != xx. ]; then
             run-mod $mod
         fi
     done
 }
 # runs a single unmasked module
 run-mod() {
-    if [[ -z $1 ]]; then
+    if [ -z "$1" ]; then
         perror "No module name specified"
         return 1
     fi
@@ -236,26 +234,26 @@ run-mod() {
     MOD=$BASE/mods/??.$mod
     RC=$MOD/rc
 
-    if [ ! -d $MOD ] && echo $MOD; then
+    if [ ! -d "$MOD" ]; then
 	perror "Module $mod does not exist"
 	return 1
     fi
 
     pmodule $mod
 
-    if [[ -f $MOD/masked || "$DRYRUN" = "true" ]]; then
+    if [ -f "$MOD/masked" -o "$DRYRUN" = "true" ]; then
         return
     fi
     
-    if [[ -f $MOD/mod.sh ]]; then
+    if [ -f "$MOD/mod.sh" ]; then
         bash $MOD/mod.sh
     fi
 
     if [ ! -e "$DATA/config" ]; then
         return
-    elif use $mod && [[ -f $MOD/use.sh ]]; then
+    elif use $mod && [ -f "$MOD/use.sh" ]; then
         bash $MOD/use.sh
-    elif ! use $mod && [[ -f $MOD/disuse.sh ]]; then
+    elif ! use $mod && [ -f "$MOD/disuse.sh" ]; then
         bash $MOD/disuse.sh
     fi
 }

@@ -24,7 +24,7 @@ pkgchk nginx nginx
 pkgchk postgresql postgresql
 pkgchk postfix postfix
 
-if [[ -d /var/www ]]; then
+if [ -d /var/www ]; then
     pwarn "/var/www found"
 else
     pignore "/var/www not found"

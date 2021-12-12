@@ -1,4 +1,4 @@
-if ! [[ -f $DATA/backed-up ]]; then
+if [ ! -f $DATA/backed-up ]; then
     pinfo "Backing up files..."
     mkdir -p "$BACKUP"
     cp -a /home /etc /var "$BACKUP"
