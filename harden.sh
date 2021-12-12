@@ -236,9 +236,9 @@ run-mod() {
     MOD=$BASE/mods/??.$mod
     RC=$MOD/rc
 
-    if ! [[ -d $MOD ]]; then
-        perror "Module $mod does not exist"
-        return 1
+    if [ ! -d $MOD ] && echo $MOD; then
+	perror "Module $mod does not exist"
+	return 1
     fi
 
     pmodule $mod
@@ -258,3 +258,4 @@ run-mod() {
     fi
 }
 
+# vim:autoindent:expandtab:smarttab:tabstop=4:shiftwidth=4
