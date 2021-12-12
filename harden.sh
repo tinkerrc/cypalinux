@@ -81,6 +81,7 @@ instsecret() {
 }
 # instdir source/config_dir dest/config_dir
 instdir() {
+    [ -d "$2" ] && mv $2{,.bak}
     mkdir -p $2
     pushd $1
     find . -type f -exec install -o root -g root -Dm644 {} $2/{} \;
@@ -91,7 +92,7 @@ instdir() {
 red="\x1b[38;2;255;23;68m"
 green="\x1b[38;2;0;230;118m"
 blue="\x1b[38;2;0;176;255m"
-orange="\x1b[38;2;255;61;0m"
+orange="\x1b[38;2;255;191;0m"
 gray="\x1b[38;2;153;153;153m"
 purple="\x1b[38;2;234;128;252m"
 reset="\x1b[0m"
@@ -111,6 +112,10 @@ perror() {
 }
 pignore() {
     echo -e "$gray$*$reset"
+}
+ptodo() {
+    echo -e "$purple$*$reset"
+    echo "$*" >> "$DATA/todo"
 }
 pmodule() {
     echo -e "${purple}-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=$reset"
@@ -197,9 +202,9 @@ add-crontab() {
 
 # - Module FS layout
 #    +-- /mods/mod_name/
-#    | mods.sh         -- will be run regardless
-#    | use.sh          -- will be run if module name is kept in config
-#    | disuse.sh       -- will be run if module name is removed from config
+#    | mods.sh         -- will be run regardless (unless manually removed from merged config)
+#    | use.sh          -- will be run if module name is kept in user config
+#    | disuse.sh       -- will be run if module name is removed from user config
 #    | pkgs            -- contains list of packages required by this module
 #    | is_interactive  -- mark module as interactive (may require user input)
 #    | masked          -- completely ignore this module as if it DNE

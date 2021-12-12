@@ -11,6 +11,8 @@ chmod 600 /boot/grub/grub.cfg
 # ===== tmp =====
 chown root:root /tmp
 chmod 1777 /tmp
+chmod root:root /var/tmp
+chmod 1777 /var/tmp
 
 # ===== etc =====
 chown root:root /etc

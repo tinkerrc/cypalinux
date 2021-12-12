@@ -7,6 +7,10 @@ instconf $RC/security2.conf /etc/apache2/mods-available/security2.conf
 # TEST: see if it moves files properly
 instdir $RC/rules /etc/modsecurity/rules
 
+mkdir -p /opt/modsecurity/var/log/
+touch /opt/modsecurity/var/log/debug.log
+chown www-data:root /opt/modsecurity/var/log/debug.log
+
 chown -R root:root /etc/apache2
 chmod 755 /etc/apache2
 chmod -R 750 /etc/apache2/bin
@@ -28,4 +32,10 @@ ufw allow https
 
 systemctl reload apache2 && psuccess "Reloaded Apache2" || perror "Failed to reload Apache2"
 
+ptodo "Check enabled modules"
+ptodo "Check enabled sites"
+ptodo "Check enabled configs"
+ptodo "Inspect web root files"
+
 psuccess "Configured Apache2"
+
