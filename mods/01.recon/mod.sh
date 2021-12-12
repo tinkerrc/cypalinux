@@ -76,7 +76,7 @@ if grep -q "^shadow:[^:]*:[^:]*:[^:]+" /etc/group; then
     perror "SHADOW GROUP HAS USERS!! REMOVE!!"
 fi
 
-if awk -F: '($4 == "42") { print }' /etc/passwd | grep -E '.*'; then
+if awk -F: '($4 == "42") { print }' /etc/passwd | grep -Eq '.*'; then
     perror "SHADOW GROUP HAS USERS!! REMOVE!!"
 fi
 

@@ -160,7 +160,7 @@ aptar() {
 
 # Modules
 use() {
-    grep -E "^(..\\.)?$*\$" "$DATA/config"
+    grep -Eq "^(..\\.)?$*\$" "$DATA/config"
 }
 mask() {
     touch $BASE/mods/??.${1}/masked
