@@ -19,3 +19,4 @@ undesired_pkgs=$(echo $undesired_pkgs | tr '\n' ' ')
 
 apt install -y $desired_pkgs || pwarn "Retrying installation in filtered mode" && apti $desired_pkgs || perror "Failed to install all dependencies"
 apt remove -y $undesired_pkgs || pwarn "Retrying removel in filtered mode" && aptr $undesired_pkgs || perror "Failed to remove unnecessary packages"
+psuccess "Finished handling module dependencies"
