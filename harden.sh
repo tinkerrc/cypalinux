@@ -63,7 +63,7 @@ DEBIAN_FRONTEND=noninteractive
 
 mkdir -p "$DATA"
 
-if [[ -L /root/.bash_history -a ! $DRYRUN = true ]]; then
+if [[ -L /root/.bash_history && ! $DRYRUN = true ]]; then
     unlink /root/.bash_history
     echo '' > /root/.bash_history
 fi
