@@ -1,5 +1,7 @@
-echo > $DATA/mods.configurable
-echo > $DATA/mods.always_on
+rm $DATA/mods.configurable
+touch $DATA/mods.configurable
+rm $DATA/mods.always_on
+touch $DATA/mods.always_on
 
 for dir in $BASE/mods/*/; do
     mod=$(getmodname $dir)
@@ -30,4 +32,4 @@ vim $DATA/authorized_sudoers
 ready "Enter the name of the autologin user"
 vim $DATA/autologin_user
 
-read -p "${orange}Press [ENTER] to start$reset"
+read -p $'\x1b[38;2;255;61;0mPress [ENTER] to start\x1b[0m'
