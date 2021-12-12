@@ -251,7 +251,9 @@ run-mod() {
         bash $MOD/mod.sh
     fi
 
-    if use $mod && [[ -f $MOD/use.sh ]]; then
+    if [ ! -e "$DATA/config" ]; then
+        return
+    elif use $mod && [[ -f $MOD/use.sh ]]; then
         bash $MOD/use.sh
     elif ! use $mod && [[ -f $MOD/disuse.sh ]]; then
         bash $MOD/disuse.sh
