@@ -2,7 +2,7 @@ echo "tmpfs      /dev/shm    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   
 echo "tmpfs      /tmp        tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
 echo "tmpfs      /var/tmp    tmpfs   defaults,rw,noexec,nodev,nosuid,relatime   0 0" >> /etc/fstab
 
-local fss=(freevxfs jffs2 hfs hfsplus udf)
+fss=(freevxfs jffs2 hfs hfsplus udf)
 for fs in "${fss[@]}"; do
     echo "install $fs /bin/true" >> /etc/modprobe.d/$fs.conf
     rmmod $fs -v

@@ -2,8 +2,8 @@ echo > $DATA/mods.configurable
 echo > $DATA/mods.always_on
 
 for dir in $BASE/mods/*/; do
-    local mod=$(getmodname $dir)
-    local priority=$(getmodpri $dir)
+    mod=$(getmodname $dir)
+    priority=$(getmodpri $dir)
 
     if [ -f $dir/masked -o "$priority" = xx ]; then
         continue
