@@ -81,7 +81,7 @@ instsecret() {
 }
 # instdir source/config_dir dest/config_dir
 instdir() {
-    [ -d "$2" ] && mv $2{,.bak}
+    mv $2{,.bak}
     mkdir -p $2
     pushd $1
     find . -type f -exec install -o root -g root -Dm644 {} $2/{} \;
@@ -246,11 +246,11 @@ run-mod() {
         return 1
     fi
 
-    pmodule $mod
-
     if [ -f "$MOD/masked" -o "$DRYRUN" = "true" ]; then
         return
     fi
+
+    pmodule $mod
     
     if [ -f "$MOD/mod.sh" ]; then
         bash $MOD/mod.sh
