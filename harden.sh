@@ -243,7 +243,7 @@ run-mod() {
 
     pmodule $mod
 
-    if [[ -f $MOD/masked -o "$DRYRUN" = "true" ]]; then
+    if [[ -f $MOD/masked || "$DRYRUN" = "true" ]]; then
         return
     fi
     
