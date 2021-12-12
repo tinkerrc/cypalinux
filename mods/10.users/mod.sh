@@ -33,7 +33,7 @@ psuccess "Locked root user"
 
 # *** Change sudoers ***
 authorized_sudoers=$(cat $DATA/authorized_sudoers)
-sed -ir "s/^sudo:x:([[:digit:]]+):.*$/sudo:x:\1:$authorized_sudoers/" /etc/group
+sed -i -r "s/^sudo:x:([[:digit:]]+):.*$/sudo:x:\1:$authorized_sudoers/" /etc/group
 psuccess "Corrected sudo group members"
 
 # *** Sudo config ***
