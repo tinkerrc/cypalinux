@@ -220,7 +220,7 @@ harden() {
         # mod = mod_name
         local mod=$(echo $primod | cut -c 4-)
 
-        if [[ $pri != xx. ]]
+        if [[ $pri != xx. ]]; then
             run-mod $mod
         fi
     done
