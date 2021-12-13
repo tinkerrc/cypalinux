@@ -1,0 +1,88 @@
+set foldmethod=syntax
+set foldtext=substitute(getline(v:foldstart),'\\t',repeat('\ ',&tabstop),'g').' ... '.trim(getline(v:foldend))
+set fillchars=fold:\ ,eob:\ 
+set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,resize,winpos,terminal
+set autowrite
+set noshowmode
+set autoindent expandtab smarttab tabstop=4 shiftwidth=4
+set formatoptions=tcqrn1
+set clipboard=unnamedplus
+set splitright splitbelow
+set number relativenumber
+set showmatch
+set mouse=a
+set breakindentt
+set undofile
+set smartcase
+set updatetime=250
+set termguicolors
+set completeopt=menuone,noselect
+
+let mapleader = ' '
+let maplocalleader = ' '
+
+inoremap <C-f> <C-x><C-f>
+inoremap <C-l> <Right><C-x><C-f>
+
+nnoremap <leader>. :e %:h/<tab>
+nnoremap <leader>> :e ./<tab>
+nnoremap <leader>/ :!grep -r 
+
+nnoremap <silent> <leader>pc :cd %:h<cr>
+
+nnoremap <silent> <leader>wv :vs<cr>
+nnoremap <silent> <leader>ws :sp<cr>
+
+nnoremap <leader>wh <C-w>h
+nnoremap <leader>wj <C-w>j
+nnoremap <leader>wk <C-w>k
+nnoremap <leader>wl <C-w>l
+nnoremap <silent> <leader>wt :tabnew<cr>
+nnoremap <silent> <leader>wq :x<cr>
+
+nnoremap <leader>` <C-^>
+
+nnoremap <silent> <leader>fw :wa<cr>
+
+nnoremap <expr> k v:count == 0 ? 'gk' : 'k'
+nnoremap <expr> j v:count == 0 ? 'gj' : 'j'
+
+nnoremap <silent> <esc> :noh<cr><esc>
+
+inoremap <expr> <esc> pumvisible() ? "<c-e><esc>" : "<esc>"
+inoremap <expr> <c-c> pumvisible() ? "<c-e><c-c>" : "<c-c>"
+inoremap <expr> <tab> pumvisible() ? "<c-n>" : "<tab>"
+inoremap <expr> <s-tab> pumvisible() ? "<c-p>" : "<bs>"
+
+nnoremap <silent> <leader>bk <C-^>:bd#<cr>
+nnoremap <silent> <leader>bK :bufdo bdelete<cr>
+nnoremap <silent> <leader>bO :%bd|e#<cr>
+
+
+let g:lightline = {
+    \ 'colorscheme': 'onedark',
+    \ 'active': {
+    \   'left':  [['mode','paste'],
+    \             ['filename'],
+    \             ['charvaluehex']],
+    \   'right': [['lineinfo'],
+    \             ['percent'], ['fileformat','fileencoding','filetype']],
+    \ },
+    \ 'tabline': {
+    \   'left': [['tabs']],
+    \   'right': [['close']]
+    \ },
+    \ 'component': {
+    \   'filename': '%t %{&filetype=="help"?"[?]":&modified?"[+]":&modifiable?" ":"[RO]"}',
+    \   'charvaluehex': '0x%B',
+    \   'lineinfo': '%3l:%-2v',
+    \   'percent': '%3p%%',
+    \ },
+    \ 'component_visible_condition': {
+    \   'readonly': '(&filetype!="help"&& &readonly)',
+    \   'modified': '(&filetype!="help"&&(&modified||!&modifiable))',
+    \ },
+    \ }
+
+let g:onedark_terminal_italics = 1
+colorscheme onedark

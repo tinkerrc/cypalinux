@@ -187,6 +187,14 @@ add-crontab() {
     crontab "$DATA/crontab"
 }
 
+# Misc
+blank() {
+    echo -n > $1
+}
+print() {
+    echo -n $@
+}
+
 # ====================
 # Main
 # ====================
@@ -206,6 +214,7 @@ add-crontab() {
 #    | use.sh          -- will be run if module name is kept in user config
 #    | disuse.sh       -- will be run if module name is removed from user config
 #    | pkgs            -- contains list of packages required by this module
+#    | services        -- will be enabled if module is enabled
 #    | is_interactive  -- mark module as interactive (may require user input)
 #    | masked          -- completely ignore this module as if it DNE
 
@@ -214,7 +223,10 @@ harden() {
     # TODO: add more todos from remnote
     # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap
     # TODO: https://github.com/trimstray/the-practical-linux-hardening-guide
+    # TODO: acquire a list of services from all possible distros (for diffing against)
     # TODO: https://www.open-scap.org/security-policies/scap-security-guide/#install
+    # FIXME: create services file and handle properly
+    # FIXME: ptodo inspect crontabs
 
     # primoddir = $BASE/mods/??.mod_name/
     for primoddir in $BASE/mods/*/; do
@@ -246,16 +258,31 @@ run-mod() {
         return 1
     fi
 
-    if [ -f "$MOD/masked" -o "$DRYRUN" = "true" ]; then
+    if [ -f "$MOD/masked" ]; then
         return
     fi
 
     pmodule $mod
+
+    if [ "$DRYRUN" = "true" ]; then
+        return
+    fi
     
-    if [ -f "$MOD/mod.sh" ]; then
+    # Install packages for manually run packages.
+    if [[ $(getmodpri $mod) = xx && -f $MOD/pkgs ]]; then
+        pinfo "Installing dependencies"
+        apt install -y $(cat $MOD/pkgs)
+        psuccess "Installed dependencies"
+    fi
+
+    # If config exists, run mod.sh if it's in the config
+    # If config does not exist, always run mod.sh
+    if [[ -f "$MOD/mod.sh" ]] && ( [ ! -f $DATA/config ] || use $mod ) ; then
         bash $MOD/mod.sh
     fi
 
+    # If config does not exist, return immediately
+    # If config exists, run use.sh if this module is used, run disuse.sh otherwise
     if [ ! -e "$DATA/config" ]; then
         return
     elif use $mod && [ -f "$MOD/use.sh" ]; then

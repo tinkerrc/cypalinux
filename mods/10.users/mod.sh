@@ -1,5 +1,7 @@
 usermod -g 0 root
 
+#FIXME: do something with grpck pwck and /etc/gshadow ggroup whatevers
+
 # *** Change password ***
 # TEST: see if other users get Password123! and autologin gets password
 pinfo 'Change passwords (might take a while)...'
@@ -48,6 +50,7 @@ instconf $RC/common-password /etc/pam.d/common-password
 instconf $RC/common-session /etc/pam.d/common-session
 instconf $RC/common-session-noninteractive /etc/pam.d/common-session-noninteractive
 instconf $RC/common-auth /etc/pam.d/common-auth
+instconf $RC/other /etc/pam.d/other
 # TODO: install defaults for binary-specific pam configs as well
 instconf $RC/pwquality.conf /etc/security/pwquality.conf
 rm -rf /etc/security/pwquality.conf.d

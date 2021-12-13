@@ -15,6 +15,7 @@ updatedb
 pinfo "locate database updated"
 
 mkdir -p "$BACKUP/quarantine"
+# FIXME: media quarantine didn't work
 locate -0 -i --regex \
     "^/home/.*\.(aac|avi|flac|flv|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|rmvb|wma|wmv)$" | \
     grep -Ev '.config|.local|.cache|Wallpaper' | tee "$DATA/banned_files" | xargs -r0 mv -t "$BACKUP/quarantine" || perror "Couldn't quarantine files"
@@ -22,4 +23,4 @@ locate -0 -i --regex \
     "\.(aac|avi|flac|flv|gif|jpeg|jpg|m4a|mkv|mov|mp3|mp4|mpeg|mpg|ogg|png|rmvb|wma|wmv)$" | \
     grep -Ev '^(/usr|/var/lib)' | tee "$DATA/sus_files"
 psuccess "Media files in /home are quarantined in \$BACKUP/quarantine (see \$DATA/banned_files)."
-pinfo "Also check \$DATA/sus_files for suspicious files"
+ptodo "Check \$DATA/sus_files for suspicious files"

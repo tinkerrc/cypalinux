@@ -1,2 +1,2 @@
-aide -i # initialize database
+aideinit
 add-crontab "0 5 * * * /usr/bin/aide.wrapper --config /etc/aide/aide.conf --check"
