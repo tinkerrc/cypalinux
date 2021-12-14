@@ -1,4 +1,9 @@
-pinfo "Walnut High School CSC CyberPatriot Linux Hardening Script"
+pinfo "=================================="
+pinfo "| Walnut HS Cyber Security Club  |"
+pinfo "|            Team 1              |"
+pinfo "|     Linux Hardening Script     |"
+pinfo "=================================="
+pinfo "Timestamp: `date --rfc-3339=seconds`"
 
 todo "Run 'setxkbmap -option caps:swapescape' as a regular user"
 todo "Launch two root shells in another terminal in case something goes wrong"

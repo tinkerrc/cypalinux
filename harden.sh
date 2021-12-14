@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
+
+#   ==================================
+#   | Walnut HS Cyber Security Club  |
+#   |            Team 1              |
+#   |     Linux Hardening Script     |
+#   ==================================
+
+if [[ -z $DRYRUN ]]; then
+    DRYRUN=false
+fi
+
 set -au
 unalias -a
-umask 027
-
-#   ==================================
-#   |     Linux Hardening Script     |
-#   | Walnut HS Cyber Security Club  |
-#   ==================================
-
-DRYRUN=false
+umask 0027
 
 # ====================
 # Sanity Checks
 # ====================
-# Save time by not typing sudo all the time
-if [ ! "$(whoami)" = "root" -a ! "$DRYRUN" = "true" ]; then
+# We require the script to be run as root.
+# Save time by not typing sudo all the time.
+if [[ ! $(whoami) = root && ! $DRYRUN = true ]]; then
     echo "Please try again with root privileges..."
-    return 1
+    # return if sourced, otherwise exit
+    return 1 2>/dev/null || exit 1
 fi
 
-# Make sure the script was sourced, not run directly
+# Make sure the script better better better better was sourced, not run directly
 # Ensure accessibility of functions and variables when modules are rerun
-if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
-    echo "Invoke harden to secure the machine"
-else
+if [ "${BASH_SOURCE[0]}" == "${0}" ]; then
     echo "Run 'source harden.sh' instead"
     exit 1
 fi
@@ -59,14 +63,16 @@ BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
 DATA="/cypa/data"
 BACKUP="/cypa/backup" # created by mod.backup
 ERRLOG="/cypa/errors.log"
+RUNLOG="/cypa/run.log"
 DEBIAN_FRONTEND=noninteractive
 EDITOR=vim
 
 mkdir -p "$DATA"
 
-if [ -L /root/.bash_history -a ! "$DRYRUN" = true ]; then
+# Re-enable root bash_history
+if [[ -L /root/.bash_history && ! $DRYRUN = true ]]; then
     unlink /root/.bash_history
-    echo '' > /root/.bash_history
+    echo -n > /root/.bash_history
 fi
 
 # ====================
@@ -100,23 +106,29 @@ reset="\x1b[0m"
 
 psuccess() {
     echo -e "$green$*$reset"
+    echo -e "SUC: $*" >> $RUNLOG
 }
 pinfo() {
     echo -e "$blue$*$reset"
+    echo -e "INF: $*" >> $RUNLOG
 }
 pwarn() {
-    echo -e "$orange$*$reset"
+    echo -e "$orange$*$reset" >&2
+    echo -e "WRN: $*" >> $RUNLOG
 }
 perror() {
-    echo -e "$red$*$reset"
+    echo -e "$red$*$reset" >&2
+    echo "ERR: $*" >> $RUNLOG
     echo "$*" >> $ERRLOG
 }
 pignore() {
     echo -e "$gray$*$reset"
+    echo "IGN: $*" >> $RUNLOG
 }
 ptodo() {
     echo -e "$purple$*$reset"
     echo "$*" >> "$DATA/todo"
+    echo "TDO: $*" >> $RUNLOG
 }
 pmodule() {
     echo -e "${purple}-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=$reset"
@@ -177,9 +189,11 @@ unmask() {
 getmoddir() {
     echo -n $BASE/mods/??.${1}/
 }
+# Converts module path to module name
 getmodname() {
     basename $1 | cut -c 4-
 }
+# Converts module path to module priority
 getmodpri() {
     basename $1 | cut -c -2
 }
@@ -221,9 +235,8 @@ print() {
 #    | use.sh          -- will be run if module name is kept in user config
 #    | disuse.sh       -- will be run if module name is removed from user config
 #    | pkgs            -- contains list of packages required by this module
-#    | services        -- will be enabled if module is enabled
+#    | masked          -- if present, completely ignore this module as if it does not exist
 #    | is_interactive  -- mark module as interactive (may require user input)
-#    | masked          -- completely ignore this module as if it DNE
 
 # runs all unmasked nonmanual modules
 harden() {
@@ -237,7 +250,7 @@ harden() {
     # TODO: script the STIG's
     # TODO: xx.default-config (default /etc for all $OS)
 
-    for dir in $BASE/mods/*/; do
+    for dir in $BASE/mods/??.*/; do
         if [[ $(getmodpri $dir) != xx ]]; then
             run-mod $(getmodname $dir)
         fi
@@ -245,7 +258,7 @@ harden() {
 }
 # runs a single unmasked module
 run-mod() {
-    if [ -z "$1" ]; then
+    if [[ -z $1 ]]; then
         perror "No module name specified"
         return 1
     fi
@@ -254,43 +267,47 @@ run-mod() {
     MOD=$(echo $BASE/mods/??.$mod)
     RC=$MOD/rc
 
-    if [ ! -d "$MOD" ]; then
+    if [[ ! -d $MOD ]]; then
         perror "Module $mod does not exist"
         return 1
     fi
 
-    if [ -f "$MOD/masked" ]; then
+    if [[ -f $MOD/masked ]]; then
         return
     fi
 
     pmodule $mod
 
-    if [ "$DRYRUN" = "true" ]; then
+    if [[ $DRYRUN = true ]]; then
         return
     fi
     
-    # Install packages for manually run packages.
-    if [[ $(getmodpri $mod) = xx && -f $MOD/pkgs ]]; then
+    # Install dependencies for manually run modules.
+    # Dependencies for normal modules are managed by mod-deps
+    if [[ $(getmodpri $mod) = xx && -f $MOD/pkgs && ! -f $MOD/pkgs_installed ]]; then
         pinfo "Installing dependencies"
         apt install -y $(cat $MOD/pkgs)
+        touch $MOD/pkgs_installed
         psuccess "Installed dependencies"
     fi
 
     # If config exists, run mod.sh if module name is found
     # If config does not exist, always run mod.sh
-    if [[ -f "$MOD/mod.sh" ]] && ( [ ! -f $DATA/config ] || use $mod ) ; then
+    if [[ -f $MOD/mod.sh ]] && ( [[ ! -f $DATA/config ]] || use $mod ) ; then
         bash $MOD/mod.sh
     fi
 
     # If config does not exist, return immediately
     # If config exists, run use.sh if this module name is found, run disuse.sh otherwise
-    if [ ! -e "$DATA/config" ]; then
+    if [[ ! -e $DATA/config ]]; then
         return
-    elif use $mod && [ -f "$MOD/use.sh" ]; then
+    elif use $mod && [[ -f $MOD/use.sh ]]; then
         bash $MOD/use.sh
-    elif ! use $mod && [ -f "$MOD/disuse.sh" ]; then
+    elif ! use $mod && [[ -f $MOD/disuse.sh ]]; then
         bash $MOD/disuse.sh
     fi
 }
+
+psuccess "Invoke 'harden' to secure to machine"
 
 # vim:autoindent:expandtab:smarttab:tabstop=4:shiftwidth=4

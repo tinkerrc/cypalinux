@@ -36,6 +36,7 @@ ptodo "Check enabled modules"
 ptodo "Check enabled sites"
 ptodo "Check enabled configs"
 ptodo "Inspect web root files"
+ptodo "Patch log4j"
 
 psuccess "Configured Apache2"
 
