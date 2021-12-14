@@ -180,11 +180,14 @@ getmodpri() {
     basename $1 | cut -c -2
 }
 
-# Cron
+# Services
 add-crontab() {
     crontab -l > "$DATA/crontab"
     echo "$1" >> "$DATA/crontab"
     crontab "$DATA/crontab"
+}
+disnow() {
+    systemctl disable --now $1
 }
 
 # Misc
@@ -227,6 +230,8 @@ harden() {
     # TODO: https://www.open-scap.org/security-policies/scap-security-guide/#install
     # FIXME: create services file and handle properly
     # FIXME: ptodo inspect crontabs
+    # TODO: stigs
+    # TODO: xx.default-config
 
     # primoddir = $BASE/mods/??.mod_name/
     for primoddir in $BASE/mods/*/; do

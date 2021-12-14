@@ -1,17 +1,8 @@
+# *** Ensure root user is in root group ***
 usermod -g 0 root
 
-#FIXME: do something with grpck pwck and /etc/gshadow ggroup whatevers
+# FIXME: do something with grpck pwck and /etc/gshadow ggroup whatevers
 
-# *** Change password ***
-# TEST: see if other users get Password123! and autologin gets password
-pinfo 'Change passwords (might take a while)...'
-sed '/^$/d;s/^ *//;s/ *$//;s/$/:Password123!/' $DATA/authorized_users > "$DATA/chpw"
-
-# pipe into xargs to trim
-autologin_user=$(cat $DATA/autologin_user | xargs)
-sed -i "s/$autologin_user:.*/$autologin_user:password/" "$DATA/chpw"
-chpasswd < "$DATA/chpw"
-psuccess 'Change passwords (might take a while)... Done'
 
 # *** Remove unauthorized users and run chage on valid users ***
 awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/existing_users"
@@ -20,9 +11,9 @@ psuccess "Removed unauthorized users"
 
 gawk -i inplace -F: '$3 != 0 || ($3 == 0 && $1 == "root") {print $0}' /etc/passwd
 for user in `awk -F: '($3 < 1000) {print $1 }' /etc/passwd`; do
-    if [ $user != "root" ]; then
+    if [[ $user != root ]]; then
         usermod -L $user
-        if [ $user != "sync" ] && [ $user != "shutdown" ] && [ $user != "halt" ]; then
+        if [[ $user != sync && $user != shutdown && $user != halt ]]; then
             usermod -s /usr/sbin/nologin $user &>/dev/null
         fi
     fi
@@ -39,8 +30,7 @@ sed -i -r "s/^sudo:x:([[:digit:]]+):.*$/sudo:x:\1:$authorized_sudoers/" /etc/gro
 psuccess "Corrected sudo group members"
 
 # *** Sudo config ***
-mkdir -p $BACKUP/sudoers
-mv /etc/sudoers.d/* $BACKUP/sudoers
+mv /etc/sudoers.d/* $BACKUP
 install -o root -g root -Dm 440 $RC/sudoers /etc/sudoers
 psuccess "Installed secure sudoers config"
 
@@ -51,10 +41,23 @@ instconf $RC/common-session /etc/pam.d/common-session
 instconf $RC/common-session-noninteractive /etc/pam.d/common-session-noninteractive
 instconf $RC/common-auth /etc/pam.d/common-auth
 instconf $RC/other /etc/pam.d/other
-# TODO: install defaults for binary-specific pam configs as well
+# TODO: install defaults for service-specific pam configs as well
 instconf $RC/pwquality.conf /etc/security/pwquality.conf
 rm -rf /etc/security/pwquality.conf.d
 psuccess "Installed secure PAM config"
+
+# *** Change password ***
+# NOTE: changing password before
+pinfo 'Change passwords (might take a while)...'
+sed '/^$/d;s/^ *//;s/ *$//;s/$/:P@ssw0rd312!/' $DATA/authorized_users > "$DATA/chpw"
+
+# pipe into xargs to trim
+autologin_user=$(cat $DATA/autologin_user | xargs)
+grep -Ev "^$autologin_user:" "$DATA/chpw" > "$DATA/chpw.new"
+mv -f "$DATA/chpw"{.new,}
+
+chpasswd < "$DATA/chpw"
+psuccess 'All passwords changed (except autologin user)'
 
 # *** Miscellaneous ***
 instconf $RC/login.defs /etc/login.defs
