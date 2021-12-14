@@ -19,7 +19,7 @@ echo "UTF-8" > /etc/pure-ftpd/conf/FSCharset
 echo "1000" > /etc/pure-ftpd/conf/MinUID
 psuccess "Configured pure-ftpd"
 
-if ! [ -f /etc/ssl/private/pure-ftpd.pem ]; then
+if ! [[ -f /etc/ssl/private/pure-ftpd.pem ]]; then
     mkdir -p /etc/ssl/private
     pinfo "Generate Diffie-Hellman Parameters"
     openssl dhparam -out /etc/ssl/private/pure-ftpd-dhparams.pem 2048

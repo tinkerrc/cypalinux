@@ -61,7 +61,7 @@ instconf $RC/login.defs /etc/login.defs
 useradd -D -f 30
 psuccess "Installed miscellaneous configs"
 
-if [ ! -f $MOD/keep_nopasswdlogin ]; then
+if [[ ! -f $MOD/keep_nopasswdlogin ]]; then
     delgroup -f nopasswdlogin 2>/dev/null && psuccess "Removed nopasswdlogin group"
 fi
 

@@ -1,4 +1,4 @@
-if [ -f "$ERRLOG" ]; then
+if [[ -f $ERRLOG ]]; then
     echo -en "$red"
     sort -u "$ERRLOG"
     ptodo "Please review the above errors"

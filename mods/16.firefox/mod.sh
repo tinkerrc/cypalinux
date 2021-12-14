@@ -5,7 +5,7 @@ for home in /home/*/; do
     done
 done
 
-if [[ "$OS" = d* ]]; then
+if [[ $OS = d* ]]; then
     instconf $RC/debian_locked.js /etc/firefox-esr/firefox-esr.js
     killall firefox-esr
 else

@@ -1,6 +1,6 @@
 # FIXME: acquire initial-status.gz for Ubuntu 20 and Debian 10 (?)
 pkglist=/var/log/installer/initial-status.gz
-if [ -f "$RC/$OS/initial-status.gz" ]; then
+if [[ -f $RC/$OS/initial-status.gz ]]; then
     pkglist="$RC/$OS/initial-status.gz"
 fi
 pinfo "Packages acquired after distro installation"

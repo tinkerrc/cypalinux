@@ -14,13 +14,13 @@ reset-test() {
 }
 setup-test() {
         pinfo "Setting up test"
-        run-mod apt-src
-        run-mod core-deps
-        run-mod vim
+        mod apt-src
+        mod core-deps
+        mod vim
 
-        run-mod config
+        mod config
 
-        pwarn "Note: all interactive modules (except 'start') will be masked unless reset-test is invoked"
+        pwarn "Note: Most interactive modules (except 'start') will be masked unless reset-test is invoked"
 
         todo "Take a snapshot of the VM"
 
@@ -36,7 +36,7 @@ setup-test() {
 }
 
 test-harden() {
-    if ! [ -f $DATA/test ]; then
+    if ! [[ -f $DATA/test ]]; then
         setup-test
     fi
 

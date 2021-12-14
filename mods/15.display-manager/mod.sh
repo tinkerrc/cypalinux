@@ -1,7 +1,7 @@
-if [ -d /etc/lightdm ]; then
+if [[ -d /etc/lightdm ]]; then
     instconf $RC/lightdm.conf /etc/lightdm/lightdm.conf
 fi
-if [ -d /etc/gdm3 ]; then
+if [[ -d /etc/gdm3 ]]; then
     # TODO: replace with a new file, don't edit
     # FIXMME: replace custom.conf ([security] AllowRoot=false)
     sed -i 's/^.*disable-user-list.*$/disable-user-list=true/' /etc/gdm3/greeter.dconf-defaults

@@ -27,7 +27,7 @@ fi
 
 # Make sure the script better better better better was sourced, not run directly
 # Ensure accessibility of functions and variables when modules are rerun
-if [ "${BASH_SOURCE[0]}" == "${0}" ]; then
+if [[ ${BASH_SOURCE[0]} == ${0} ]]; then
     echo "Run 'source harden.sh' instead"
     exit 1
 fi
@@ -51,7 +51,7 @@ elif (lsb_release -a 2>/dev/null | grep -q 'Debian 10'); then
     OS=d10
 elif (lsb_release -a 2>/dev/null | grep -q 'Debian 11'); then
     OS=d11
-elif [ "$DRYRUN" = "true" ]; then
+elif [[ $DRYRUN = true ]]; then
     OS=u18
 else
     echo "Failed to identify OS version"
@@ -104,60 +104,64 @@ gray="\x1b[38;2;153;153;153m"
 purple="\x1b[38;2;234;128;252m"
 reset="\x1b[0m"
 
+pdate() {
+    date --rfc-3339=seconds
+}
 psuccess() {
     echo -e "$green$*$reset"
-    echo -e "SUC: $*" >> $RUNLOG
+    echo -e "`pdate`  SUC: $*" >> $RUNLOG
 }
 pinfo() {
     echo -e "$blue$*$reset"
-    echo -e "INF: $*" >> $RUNLOG
+    echo -e "`pdate`  INF: $*" >> $RUNLOG
 }
 pwarn() {
     echo -e "$orange$*$reset" >&2
-    echo -e "WRN: $*" >> $RUNLOG
+    echo -e "`pdate`  WRN: $*" >> $RUNLOG
 }
 perror() {
     echo -e "$red$*$reset" >&2
-    echo "ERR: $*" >> $RUNLOG
-    echo "$*" >> $ERRLOG
+    echo "`pdate`  ERR: $*" >> $RUNLOG
+    echo "`pdate`  $*" >> $ERRLOG
 }
 pignore() {
     echo -e "$gray$*$reset"
-    echo "IGN: $*" >> $RUNLOG
+    echo "`pdate`  IGN: $*" >> $RUNLOG
 }
 ptodo() {
     echo -e "$purple$*$reset"
     echo "$*" >> "$DATA/todo"
-    echo "TDO: $*" >> $RUNLOG
+    echo "`pdate`  TDO: $*" >> $RUNLOG
 }
 pmodule() {
     echo -e "${purple}-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=$reset"
     echo -e "${purple}     Module :: $*$reset" 
     echo -e "${purple}-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=$reset"
-    sleep 0.3
+    echo >> $RUNLOG
+    echo "`pdate`  MOD: $*" >> $RUNLOG
 }
 
 # Prompts
-todo () {
+todo() {
     # Follow the instruction; might have to leave terminal
     echo -e "${red}TODO:$reset $*"
     sleep 0.1
-    read -n 1 -rp "Press [ENTER] when you finish"
+    read -n 1 -rp $"\x1b[38;2;153;153;153mPress [ENTER] when you finish\x1b[0m"
 }
 ready() {
     # Wait for user to be ready
-    if [ "$*" != "" ]; then
+    if [[ $* != '' ]]; then
         echo -e "${purple}READY:$reset $*"
     fi
     sleep 0.1
-    read -n 1 -rp "Press [ENTER] when you are ready"
+    read -n 1 -rp $'\x1b[38;2;153;153;153mPress [ENTER] when you are ready\x1b[0m'
 }
 
 # Package Management
 apti() {
     local packages=""
     for i in "$@"; do 
-        if ! [ -z "$(apt-cache madison $i 2>/dev/null)" ]; then
+        if ! [[ -z $(apt-cache madison $i 2>/dev/null) ]]; then
             packages="$packages $i"
         fi
     done
@@ -186,15 +190,15 @@ mask() {
 unmask() {
     rm -f $BASE/mods/??.${1}/masked
 }
-getmoddir() {
+moddir() {
     echo -n $BASE/mods/??.${1}/
 }
 # Converts module path to module name
-getmodname() {
+modname() {
     basename $1 | cut -c 4-
 }
 # Converts module path to module priority
-getmodpri() {
+modpri() {
     basename $1 | cut -c -2
 }
 
@@ -248,16 +252,15 @@ harden() {
     # TEST: on Ubuntu 20
     # TEST: on Debian 10 (buster)
     # TODO: script the STIG's
-    # TODO: xx.default-config (default /etc for all $OS)
 
     for dir in $BASE/mods/??.*/; do
-        if [[ $(getmodpri $dir) != xx ]]; then
-            run-mod $(getmodname $dir)
+        if [[ $(modpri $dir) != xx ]]; then
+            mod $(modname $dir)
         fi
     done
 }
 # runs a single unmasked module
-run-mod() {
+mod() {
     if [[ -z $1 ]]; then
         perror "No module name specified"
         return 1
@@ -266,6 +269,7 @@ run-mod() {
     local mod=$1
     MOD=$(echo $BASE/mods/??.$mod)
     RC=$MOD/rc
+    mkdir -p $DATA/mods/
 
     if [[ ! -d $MOD ]]; then
         perror "Module $mod does not exist"
@@ -273,41 +277,54 @@ run-mod() {
     fi
 
     if [[ -f $MOD/masked ]]; then
-        return
+        perror "Module $mod is masked"
+        return 1
     fi
 
     pmodule $mod
 
     if [[ $DRYRUN = true ]]; then
+        pignore "Module $mod is ignored (dry run)"
         return
     fi
-    
+
+    if [[ -f $DATA/mods/$1 ]]; then
+        pwarn "Rerunning module $1"
+    fi
+
     # Install dependencies for manually run modules.
     # Dependencies for normal modules are managed by mod-deps
-    if [[ $(getmodpri $mod) = xx && -f $MOD/pkgs && ! -f $MOD/pkgs_installed ]]; then
+    if [[ $(modpri $mod) = xx && -f $MOD/pkgs && ! -f $MOD/pkgs_installed ]]; then
         pinfo "Installing dependencies"
         apt install -y $(cat $MOD/pkgs)
         touch $MOD/pkgs_installed
         psuccess "Installed dependencies"
     fi
 
+    local status=ok
     # If config exists, run mod.sh if module name is found
     # If config does not exist, always run mod.sh
     if [[ -f $MOD/mod.sh ]] && ( [[ ! -f $DATA/config ]] || use $mod ) ; then
-        bash $MOD/mod.sh
+        pinfo "Running $mod/mod.sh"
+        bash $MOD/mod.sh || status=failed
     fi
 
-    # If config does not exist, return immediately
+    # If config does not exist, do nothing
     # If config exists, run use.sh if this module name is found, run disuse.sh otherwise
     if [[ ! -e $DATA/config ]]; then
-        return
+        :
     elif use $mod && [[ -f $MOD/use.sh ]]; then
-        bash $MOD/use.sh
+        pinfo "Running $mod/use.sh"
+        bash $MOD/use.sh || status=failed
     elif ! use $mod && [[ -f $MOD/disuse.sh ]]; then
-        bash $MOD/disuse.sh
+        pinfo "Running $mod/disuse.sh"
+        bash $MOD/disuse.sh || status=failed
     fi
+
+    touch $DATA/mods/$mod
+    [[ $status = failed ]] && perror "Module $mod finished with errors"
 }
 
 psuccess "Invoke 'harden' to secure to machine"
 
-# vim:autoindent:expandtab:smarttab:tabstop=4:shiftwidth=4
+# vim: autoindent expandtab smarttab tabstop=4 shiftwidth=4

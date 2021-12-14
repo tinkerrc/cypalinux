@@ -128,11 +128,11 @@ for home in /home/*/; do
     user=$(basename $home)
     chown -R $user:$user $home
     chmod 700 $home
-    if [ -d $home/.ssh ]; then
+    if [[ -d $home/.ssh ]]; then
         chmod 700 $home/.ssh 
         chmod 600 $home/.ssh/*
     fi
-    if [ -d $home/.gnupg ]; then
+    if [[ -d $home/.gnupg ]]; then
        chmod 700 $home/.gnupg
        chmod 600 $home/.gnupg/*
     fi

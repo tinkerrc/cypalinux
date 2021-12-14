@@ -3,14 +3,14 @@ blank $DATA/mods.always_on
 blank $DATA/config
 
 for dir in $BASE/mods/*/; do
-    mod=$(getmodname $dir)
-    priority=$(getmodpri $dir)
+    mod=$(modname $dir)
+    priority=$(modpri $dir)
 
-    if [ -f $dir/masked -o "$priority" = xx ]; then
+    if [[ -f $dir/masked || $priority = xx ]]; then
         continue
     fi
 
-    if [ -f $dir/use.sh -o -f $dir/disuse.sh ]; then
+    if [[ -f $dir/use.sh || -f $dir/disuse.sh ]]; then
         echo $mod >> $DATA/mods.configurable
     else
         echo $mod >> $DATA/mods.always_on
