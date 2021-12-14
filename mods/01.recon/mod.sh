@@ -82,4 +82,4 @@ fi
 
 run-mod manual-pkgs
 
-todo "Read recon report above"
+todo "Read recon report above (reminder: duplicate users/groups are best removed immediately)"

@@ -6,8 +6,6 @@ instconf $RC/security.conf /etc/apache2/conf-available/security.conf
 instconf $RC/modsecurity.conf /etc/modsecurity/modsecurity.conf
 instconf $RC/crs-setup.conf /usr/share/modsecurity-crs/crs-setup.conf
 instconf $RC/security2.conf /etc/apache2/mods-available/security2.conf
-# NOTE: /usr/share/modsecurity-crs/ contains the same thing
-# instdir $RC/rules /etc/modsecurity/rules
 
 mkdir -p /opt/modsecurity/var/log/
 touch /opt/modsecurity/var/log/debug.log

@@ -1,4 +1,4 @@
-cp -r /var/spool/cron/ "$BACKUP/quarantine"
+cp -ar /var/spool/cron/ "$BACKUP/quarantine"
 rm /var/spool/cron/crontabs/*
 psuccess "Removed all user crontabs"
 
@@ -6,8 +6,11 @@ psuccess "Removed all user crontabs"
 echo "root" > /etc/cron.allow
 echo "root" > /etc/at.allow
 chmod 644 /etc/{cron,at}.allow
-psuccess "Restrict cron access"
+psuccess "Restricted cron access"
 
-pinfo "Restarting cron... "
-systemctl restart cron
-psuccess "Restarting cron... Done"
+systemctl restart cron && psuccess "Restarted cron daemon" || perror "Failed to restart cron daemon"
+
+ptodo "Inspect original crontabs"
+ptodo "Inspect /var/spool/anacron /etc/crontab /etc/anacrontab /etc/cron.* etc"
+
+psuccess "Configured cron"

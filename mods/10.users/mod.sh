@@ -1,9 +1,6 @@
 # *** Ensure root user is in root group ***
 usermod -g 0 root
 
-# FIXME: do something with grpck pwck and /etc/gshadow ggroup whatevers
-
-
 # *** Remove unauthorized users and run chage on valid users ***
 awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd > "$DATA/existing_users"
 python3 $BASE/rmusers.py $DATA
@@ -44,7 +41,7 @@ instconf $RC/other /etc/pam.d/other
 # TODO: install defaults for service-specific pam configs as well
 instconf $RC/pwquality.conf /etc/security/pwquality.conf
 rm -rf /etc/security/pwquality.conf.d
-psuccess "Installed secure PAM config"
+psuccess "Configured PAM / local user policy"
 
 # *** Change password ***
 # NOTE: changing password before
@@ -65,5 +62,8 @@ useradd -D -f 30
 psuccess "Installed miscellaneous configs"
 
 if [ ! -f $MOD/keep_nopasswdlogin ]; then
-    delgroup -f nopasswdlogin
+    delgroup -f nopasswdlogin 2>/dev/null && psuccess "Removed nopasswdlogin group"
 fi
+
+ptodo "Run pwck and grpck"
+psuccess "User audit completed"

@@ -1,5 +1,5 @@
-auth [success=1 default=ignore] pam_unix.so
-auth required                   pam_deny.so
-auth required                   pam_permit.so
-auth required                   pam_tally2.so deny=4 unlock_time=1800 onerr=fail even_deny_root silent no_log_info
-auth optional                   pam_cap.so
+auth [success=1 new_authtok_reqd=1 default=ignore]  pam_unix.so
+auth required                                       pam_deny.so
+auth required                                       pam_permit.so
+auth required                                       pam_tally2.so deny=4 unlock_time=1800 onerr=fail even_deny_root silent no_log_info
+auth optional                                       pam_cap.so

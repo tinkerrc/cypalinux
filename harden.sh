@@ -60,6 +60,7 @@ DATA="/cypa/data"
 BACKUP="/cypa/backup" # created by mod.backup
 ERRLOG="/cypa/errors.log"
 DEBIAN_FRONTEND=noninteractive
+EDITOR=vim
 
 mkdir -p "$DATA"
 
@@ -173,6 +174,9 @@ mask() {
 unmask() {
     rm -f $BASE/mods/??.${1}/masked
 }
+getmoddir() {
+    echo -n $BASE/mods/??.${1}/
+}
 getmodname() {
     basename $1 | cut -c 4-
 }
@@ -228,22 +232,14 @@ harden() {
     # TODO: https://github.com/trimstray/the-practical-linux-hardening-guide
     # TODO: acquire a list of services from all possible distros (for diffing against)
     # TODO: https://www.open-scap.org/security-policies/scap-security-guide/#install
-    # FIXME: create services file and handle properly
-    # FIXME: ptodo inspect crontabs
-    # TODO: stigs
-    # TODO: xx.default-config
+    # TEST: on Ubuntu 20
+    # TEST: on Debian 10 (buster)
+    # TODO: script the STIG's
+    # TODO: xx.default-config (default /etc for all $OS)
 
-    # primoddir = $BASE/mods/??.mod_name/
-    for primoddir in $BASE/mods/*/; do
-        # primod = ??.mod_name
-        local primod=$(basename $primoddir)
-        # pri = ??.
-        local pri=$(echo $primod | cut -c -3)
-        # mod = mod_name
-        local mod=$(echo $primod | cut -c 4-)
-
-        if [ "$pri" != xx. ]; then
-            run-mod $mod
+    for dir in $BASE/mods/*/; do
+        if [[ $(getmodpri $dir) != xx ]]; then
+            run-mod $(getmodname $dir)
         fi
     done
 }
@@ -280,14 +276,14 @@ run-mod() {
         psuccess "Installed dependencies"
     fi
 
-    # If config exists, run mod.sh if it's in the config
+    # If config exists, run mod.sh if module name is found
     # If config does not exist, always run mod.sh
     if [[ -f "$MOD/mod.sh" ]] && ( [ ! -f $DATA/config ] || use $mod ) ; then
         bash $MOD/mod.sh
     fi
 
     # If config does not exist, return immediately
-    # If config exists, run use.sh if this module is used, run disuse.sh otherwise
+    # If config exists, run use.sh if this module name is found, run disuse.sh otherwise
     if [ ! -e "$DATA/config" ]; then
         return
     elif use $mod && [ -f "$MOD/use.sh" ]; then

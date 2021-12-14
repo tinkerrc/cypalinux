@@ -17,3 +17,5 @@ ufw deny 515
 ufw deny 111
 
 psuccess "Configured UFW"
+
+# See also: netsec

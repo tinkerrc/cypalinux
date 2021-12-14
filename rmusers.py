@@ -30,4 +30,3 @@ with open(unauthed_file, "w") as f:
             print("User " + user + " (" + uid + ") removed")
         else:
             subprocess.call(['chage', '-M90', '-m1', '-W7', '-I30', user])
-            # chage -M15 -m6 -W7 -I5
