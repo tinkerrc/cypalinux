@@ -38,15 +38,14 @@ instconf $RC/common-session /etc/pam.d/common-session
 instconf $RC/common-session-noninteractive /etc/pam.d/common-session-noninteractive
 instconf $RC/common-auth /etc/pam.d/common-auth
 instconf $RC/other /etc/pam.d/other
-# TODO: install defaults for service-specific pam configs as well
+# TODO: install defaults for service-specific pam configs using default-config
 instconf $RC/pwquality.conf /etc/security/pwquality.conf
 rm -rf /etc/security/pwquality.conf.d
 psuccess "Configured PAM / local user policy"
 
 # *** Change password ***
-# NOTE: changing password before
 pinfo 'Change passwords (might take a while)...'
-sed '/^$/d;s/^ *//;s/ *$//;s/$/:P@ssw0rd312!/' $DATA/authorized_users > "$DATA/chpw"
+sed '/^$/d;s/^ *//;s/ *$//;s/$/:P@ssw0rd312!/' "$DATA/authorized_users" > "$DATA/chpw"
 
 # pipe into xargs to trim
 autologin_user=$(cat $DATA/autologin_user | xargs)
@@ -57,7 +56,7 @@ chpasswd < "$DATA/chpw"
 psuccess 'All passwords changed (except autologin user)'
 
 # *** Miscellaneous ***
-instconf $RC/login.defs /etc/login.defs
+instconf "$RC/login.defs" /etc/login.defs
 useradd -D -f 30
 psuccess "Installed miscellaneous configs"
 

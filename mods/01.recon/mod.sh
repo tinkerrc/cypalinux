@@ -81,5 +81,6 @@ if awk -F: '($4 == "42") { print }' /etc/passwd | grep -Eq '.*'; then
 fi
 
 mod manual-pkgs
+mod default-config
 
 todo "Read recon report above (reminder: duplicate users/groups are best removed immediately)"

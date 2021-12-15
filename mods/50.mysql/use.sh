@@ -8,4 +8,4 @@ instconf $RC/mysql.cnf /etc/mysql/conf.d/mysql.cnf
 
 systemctl restart mysql && psuccess "Restarted mysql" || perror "Failed to restart mysql"
 
-# TODO: TLS or no?
+ptodo "Consider setting up TLS for MySQL"

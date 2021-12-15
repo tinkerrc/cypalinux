@@ -1,5 +1,3 @@
-# FIXME: add log4j patch
-
 instconf $RC/apache2.conf /etc/apache2/apache2.conf
 instconf $RC/envvars /etc/apache2/envvars
 instconf $RC/security.conf /etc/apache2/conf-available/security.conf
@@ -36,7 +34,9 @@ ptodo "Check enabled modules"
 ptodo "Check enabled sites"
 ptodo "Check enabled configs"
 ptodo "Inspect web root files"
-ptodo "Patch log4j"
+if dpkg -s apache-log4j2 &>/dev/null; then
+    ptodo "Patch / upgrade apache-log4j2"
+fi
 
 psuccess "Configured Apache2"
 

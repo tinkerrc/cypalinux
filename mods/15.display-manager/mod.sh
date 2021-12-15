@@ -1,9 +1,9 @@
-if [[ -d /etc/lightdm ]]; then
+if grep -q lightdm /etc/X11/default-display-manager; then
     instconf $RC/lightdm.conf /etc/lightdm/lightdm.conf
 fi
-if [[ -d /etc/gdm3 ]]; then
-    # TODO: replace with a new file, don't edit
-    # FIXMME: replace custom.conf ([security] AllowRoot=false)
-    sed -i 's/^.*disable-user-list.*$/disable-user-list=true/' /etc/gdm3/greeter.dconf-defaults
-    sed -i 's:^.*\[org/gnome/login-screen\].*$:[org/gnome/login-screen]:' /etc/gdm3/greeter.dconf-defaults
+if grep -q gdm3 /etc/X11/default-display-manager; then
+    instconf $RC/greeter.dconf-defaults /etc/gdm3/greeter.dconf-defaults
+    instconf $RC/custom.conf /etc/gdm3/custom.conf
+    # TEST: test whether autologin config works
+    sed -i "s/AUTOLOGIN_USER/$(cat $DATA/autologin_user | xargs)/" /etc/gdm3/custom.conf
 fi
