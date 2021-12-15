@@ -1,3 +1,7 @@
+packadd! onedark.vim
+packadd! lightline.vim
+
+set laststatus=2
 set foldmethod=syntax
 set foldtext=substitute(getline(v:foldstart),'\\t',repeat('\ ',&tabstop),'g').' ... '.trim(getline(v:foldend))
 set fillchars=fold:\ ,eob:\ 
@@ -56,8 +60,7 @@ inoremap <expr> <s-tab> pumvisible() ? "<c-p>" : "<bs>"
 
 nnoremap <silent> <leader>bk <C-^>:bd#<cr>
 nnoremap <silent> <leader>bK :bufdo bdelete<cr>
-nnoremap <silent> <leader>bO :%bd|e#<cr>
-
+" nnoremap <silent> <leader>bO :%bd|e#<cr>
 
 let g:lightline = {
     \ 'colorscheme': 'onedark',
@@ -84,5 +87,6 @@ let g:lightline = {
     \ },
     \ }
 
+syntax on
 let g:onedark_terminal_italics = 1
 colorscheme onedark

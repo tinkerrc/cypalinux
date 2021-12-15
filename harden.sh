@@ -66,6 +66,7 @@ ERRLOG="/cypa/errors.log"
 RUNLOG="/cypa/run.log"
 DEBIAN_FRONTEND=noninteractive
 EDITOR=vim
+TERM=xterm-256color
 
 mkdir -p "$DATA"
 
@@ -146,7 +147,7 @@ todo() {
     # Follow the instruction; might have to leave terminal
     echo -e "${red}TODO:$reset $*"
     sleep 0.1
-    read -n 1 -rp $"\x1b[38;2;153;153;153mPress [ENTER] when you finish\x1b[0m"
+    read -n 1 -rp $'\x1b[38;2;153;153;153mPress [ENTER] when you finish\x1b[0m'
 }
 ready() {
     # Wait for user to be ready

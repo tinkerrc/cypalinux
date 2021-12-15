@@ -1,7 +1,12 @@
 pinfo "Removing pre-existing vim configurations"
-autologin_user=$(cat $DATA/autologin_user | tr -d '\n')
-rm /root/.vimrc /home/$autologin_user/.vimrc
-rm -r /root/.vim /home/$autologin_user/.vim
+autologin_user=$(cat $DATA/autologin_user | xargs)
+if [[ -f $DATA/vim-backed-up ]]; then
+    mv -f /root/.vimrc{,.bak}
+    mv -f /home/$autologin_user/.vimrc{,.bak}
+    mv -f /root/.vim{,.bak}
+    mv -f /home/$autologin_user/.vim{,.bak}
+    touch $DATA/vim-backed-up
+fi
 
 pinfo "Installing configurations"
 instconf $RC/vimrc /etc/vim/vimrc
@@ -15,8 +20,10 @@ git clone https://github.com/itchyny/lightline.vim /root/${plug_dir}/lightline.v
 cp -r /root/${plug_dir}/onedark.vim /home/${autologin_user}/${plug_dir}/onedark.vim
 cp -r /root/${plug_dir}/lightline.vim /home/${autologin_user}/${plug_dir}/lightline.vim
 
-pinfo "Symlinking .vim to .config/nvim"
-ln -s ~/.vim /root/.config/nvim 
-ln -s ~/.vim /home/${autologin_user}/.config/nvim 
+pinfo "Creating symlinks (vim to neovim)"
+ln -sf /etc/vim /root/.config/nvim 
+ln -sf /etc/vim /home/${autologin_user}/.config/nvim 
+ln -sf /etc/vimrc.local /root/.config/nvim/init.vim
+ln -sf /etc/vimrc.local /home/${autologin_user}/.config/nvim
 
 psuccess "Configured vim and neovim"
