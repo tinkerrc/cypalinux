@@ -245,6 +245,8 @@ print() {
 
 # runs all unmasked nonmanual modules
 harden() {
+    # TODO: compare file system (just file names)
+    # TODO: compare /var (file name and contents)
     # TODO: add more todos from remnote
     # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap
     # TODO: https://github.com/trimstray/the-practical-linux-hardening-guide

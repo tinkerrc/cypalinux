@@ -21,6 +21,8 @@ cp -r /root/${plug_dir}/onedark.vim /home/${autologin_user}/${plug_dir}/onedark.
 cp -r /root/${plug_dir}/lightline.vim /home/${autologin_user}/${plug_dir}/lightline.vim
 
 pinfo "Creating symlinks (vim to neovim)"
+mkdir -p /root/.config/nvim
+mkdir -p /home/${autologin_user}/.config/nvim
 ln -sf /etc/vim /root/.config/nvim 
 ln -sf /etc/vim /home/${autologin_user}/.config/nvim 
 ln -sf /etc/vimrc.local /root/.config/nvim/init.vim
