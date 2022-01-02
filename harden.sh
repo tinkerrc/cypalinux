@@ -245,8 +245,9 @@ print() {
 
 # runs all unmasked nonmanual modules
 harden() {
-    # TODO: compare file system (just file names)
-    # TODO: compare /var (file name and contents)
+    # TODO: https://github.com/imthenachoman/How-To-Secure-A-Linux-Server
+    # TODO: Arch Wiki: Security
+    # TODO: compare file system (file names, contents, and permissions; with ignored directories, don't descend into unrecognized dirs)
     # TODO: add more todos from remnote
     # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap
     # TODO: https://github.com/trimstray/the-practical-linux-hardening-guide
@@ -287,11 +288,11 @@ mod() {
     pmodule $mod
 
     if [[ $DRYRUN = true ]]; then
-        pignore "Module $mod is ignored (dry run)"
+        pignore "Module $mod will be ignored (dry run)"
         return
     fi
 
-    if [[ -f $DATA/mods/$1 ]]; then
+    if [[ -f $DATA/mods/$mod ]]; then
         pwarn "Rerunning module $1"
     fi
 

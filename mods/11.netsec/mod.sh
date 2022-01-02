@@ -12,5 +12,4 @@ systemctl restart systemd-resolved && psuccess "systemd-resolved restarted" || p
 
 rm -f /home/*/.{netrc,forward,rhosts}
 psuccess "Removed rsh artifacts"
-
 # See also: ufw
