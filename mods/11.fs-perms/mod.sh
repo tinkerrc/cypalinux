@@ -117,6 +117,12 @@ chmod 644 /etc/bash.*
 chown root:root /etc/host*
 chmod 644 /etc/host*
 
+# ===== Misc. =====
+chmod 700 /boot 
+chmod 700 /usr/src
+chmod 700 /lib/modules
+chmod 700 /usr/lib/modules
+
 # ===== Home =====
 chown root:root /home
 chmod 755 /home

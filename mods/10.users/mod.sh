@@ -66,3 +66,6 @@ fi
 
 ptodo "Run pwck and grpck"
 psuccess "User audit completed"
+
+echo > /etc/securetty
+psuccess "Secured securetty"

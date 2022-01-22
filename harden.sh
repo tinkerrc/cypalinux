@@ -245,8 +245,7 @@ print() {
 
 # runs all unmasked nonmanual modules
 harden() {
-    # TODO: https://github.com/imthenachoman/How-To-Secure-A-Linux-Server
-    # TODO: Arch Wiki: Security
+    # TODO: https://madaidans-insecurities.github.io/guides/linux-hardening.html
     # TODO: compare file system (file names, contents, and permissions; with ignored directories, don't descend into unrecognized dirs)
     # TODO: add more todos from remnote
     # TODO: new module: xx.scap -- scan system with scap-security-guide and openscap

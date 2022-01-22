@@ -8,3 +8,10 @@ chmod 755 /etc/ssh
 chmod 644 /etc/ssh/*
 systemctl restart sshd || perror "Could not restart sshd"
 psuccess "Configured sshd"
+
+if [[ -f /etc/ssh/moduli ]]; then
+    pinfo "Removing short moduli"
+    backup /etc/ssh/moduli
+    sudo awk '$5 >= 3071' /etc/ssh/moduli | sudo tee /etc/ssh/moduli.tmp
+    sudo mv /etc/ssh/moduli.tmp /etc/ssh/moduli
+fi
