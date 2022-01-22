@@ -43,13 +43,13 @@ elif (lsb_release -a 2>/dev/null | grep -q 18.04); then
     OS=u18
 elif (lsb_release -a 2>/dev/null | grep -q 20.04); then
     OS=u20
-elif (lsb_release -a 2>/dev/null | grep -q 'Debian 8'); then
+elif (lsb_release -a 2>/dev/null | grep -q 'Debian.* 8'); then
     OS=d8
-elif (lsb_release -a 2>/dev/null | grep -q 'Debian 9'); then
+elif (lsb_release -a 2>/dev/null | grep -q 'Debian.* 9'); then
     OS=d9
-elif (lsb_release -a 2>/dev/null | grep -q 'Debian 10'); then
+elif (lsb_release -a 2>/dev/null | grep -q 'Debian.* 10'); then
     OS=d10
-elif (lsb_release -a 2>/dev/null | grep -q 'Debian 11'); then
+elif (lsb_release -a 2>/dev/null | grep -q 'Debian.* 11'); then
     OS=d11
 elif [[ $DRYRUN = true ]]; then
     OS=u18

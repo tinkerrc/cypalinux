@@ -1,6 +1,6 @@
 pinfo "Please note that default-config compares stock /etc with CURRENT /etc."
 
-if [[ -d $RC/$OS/etc ]]; then
+if [[ -d $RC/$OS/etc.zip ]]; then
     if ! [[ -d $DATA/etc ]]; then
         unzip "$RC/$OS/etc.zip" -d "$DATA/"
     fi
