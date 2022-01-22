@@ -11,7 +11,7 @@ chmod 600 /boot/grub/grub.cfg
 # ===== tmp =====
 chown root:root /tmp
 chmod 1777 /tmp
-chmod root:root /var/tmp
+chown root:root /var/tmp
 chmod 1777 /var/tmp
 
 # ===== etc =====
@@ -56,8 +56,8 @@ chmod 600 /etc/gshadow
 chown root:root /etc/gshadow-
 chmod 600 /etc/gshadow-
 
-chown root:root /etc/opasswd
-chmod 600 /etc/opasswd
+chown root:root /etc/opasswd 2>/dev/null
+chmod 600 /etc/opasswd 2>/dev/null
 
 chown root:root /etc/security/opasswd
 chmod 600 /etc/security/opasswd
@@ -70,7 +70,9 @@ chmod 400 /etc/sudoers
 
 chown -R root:root /etc/sudoers.d
 chmod 750 /etc/sudoers.d
-chmod 400 /etc/sudoers.d/*
+if ! [ -n "$(find /etc/sudoers.d -prune -empty)" ]; then
+    chmod 400 /etc/sudoers.d/*
+fi
 
 chown -R root:root /etc/pam.d
 chmod 755 /etc/pam.d
@@ -130,7 +132,7 @@ chmod 755 /home
 chown root:root /root
 chmod 700 /root
 
-for home in /home/*/; do
+for home in /home/*; do
     user=$(basename $home)
     chown -R $user:$user $home
     chmod 700 $home
