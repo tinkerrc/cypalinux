@@ -1,7 +1,10 @@
-# FIXME: acquire /etc for Ubuntu 20
-# FIXME: acquire /etc for Debian 10
-# TODO: acquire /etc for Ubuntu 18
+pinfo "Please note that default-config compares stock /etc with CURRENT /etc."
+
 if [[ -d $RC/$OS/etc ]]; then
+    if ! [[ -d $DATA/etc ]]; then
+        unzip "$RC/$OS/etc.zip" -d "$DATA/"
+    fi
+
     if diff --help | grep -q -- --color; then
         diff --color=always -r --no-dereference ${RC}/${OS}/etc /etc | less -R
     else 
