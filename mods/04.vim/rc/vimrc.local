@@ -3,8 +3,6 @@ packadd! lightline.vim
 
 set laststatus=2
 set foldmethod=syntax
-set foldtext=substitute(getline(v:foldstart),'\\t',repeat('\ ',&tabstop),'g').' ... '.trim(getline(v:foldend))
-set fillchars=fold:\ ,eob:\ 
 set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize,resize,winpos,terminal
 set autowrite
 set noshowmode
@@ -15,7 +13,7 @@ set splitright splitbelow
 set number relativenumber
 set showmatch
 set mouse=a
-set breakindentt
+set breakindent
 set undofile
 set smartcase
 set updatetime=250
