@@ -80,11 +80,6 @@ if awk -F: '($4 == "42") { print }' /etc/passwd | grep -Eq '.*'; then
     perror "Shadow group has users. Remove!!"
 fi
 
-pinfo "Verifying package integrity (including config files)"
-pfino "Starting in 3 seconds..."
-sleep 3
-debsums -a
-
 mod manual-pkgs
 mod default-config
 

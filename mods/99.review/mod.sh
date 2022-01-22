@@ -1,13 +1,17 @@
 if [[ -f $ERRLOG ]]; then
     echo -en "$red"
     sort -u "$ERRLOG"
-    ptodo "Please review the above errors"
+    pinfo "Please review the above errors"
 fi
 
+ptodo "Run mod fs-compare"
 ptodo "Run lynis, linenum, and linpeas"
+ptodo "Run mod debsums"
+ptodo "Run mod rkhunter"
+
 echo -e "$purple"
 sort -u "$DATA/todo"
-ptodo "Please review the above to-do's"
+pinfo "Please review the above to-do's"
 
 echo -en "$reset"
 
