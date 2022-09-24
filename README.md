@@ -1,12 +1,12 @@
-# CyPaLinux Hardening Script
-Walnut HS CSC 2020
+# CyberPatriot XII-XIV Linux Hardening Script
+This script (sometimes aggressively) secures Linux system & service configuration. All user input requests should be done upfront. For reference only.
+Each functionality / configured service is put in modules located in `mods/`. Enabled modules are executed alphanumerically.
 
 # How to Run
 ``` sh
-source harden.sh
-harden
+# git clone https://github.com/oakrc/cypalinux
+# cd cypalinux
+# source harden.sh
+# harden
 ```
 
-# Resources
-- [Apache Hardening](https://www.tecmint.com/apache-security-tips/)
-- [Debian vs Ubuntu](https://drive.google.com/file/d/196qL1blrJsarfG7X_ev_uP_Re7aHsWYS/view)
