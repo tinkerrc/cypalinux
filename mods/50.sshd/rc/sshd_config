@@ -1,46 +1,59 @@
 Port 22
 Protocol 2
 DebianBanner no
-HostKey /etc/ssh/ssh_host_ed25519_key
-HostKey /etc/ssh/ssh_host_rsa_key
-HostKey /etc/ssh/ssh_host_ecdsa_key
-KeyRegenerationInterval 3600
-ServerKeyBits 1024
-SyslogFacility AUTH
+
+# === Logging
+SyslogFacility AUTHPRIV
 LogLevel VERBOSE
+
+# === Authentication
+PubkeyAuthentication yes
+AuthorizedKeysFile	.ssh/authorized_keys
+UsePAM yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+StrictModes yes
 LoginGraceTime 60
 PermitRootLogin no
-StrictModes yes
-PubkeyAuthentication yes
+KerberosAuthentication no
 IgnoreRhosts yes
 IgnoreUserKnownHosts yes
 RhostsRSAAuthentication no
 HostbasedAuthentication no
 PermitEmptyPasswords no
 ChallengeResponseAuthentication no
-PasswordAuthentication no
-X11Forwarding no
-X11DisplayOffset 10
-PrintMotd no
-PrintLastLog yes
-TCPKeepAlive no
-AcceptEnv LANG LC_*
-UsePAM yes
-AllowTcpForwarding no
-AllowStreamLocalForwarding no
-GatewayPorts no
-PermitTunnel no
-UseDNS yes
-ClientAliveInterval 300
-ClientAliveCountMax 0
-AllowAgentForwarding no
+UseDNS no
+#AuthorizedPrincipalsFile none
+#AuthorizedKeysCommand none
+#AuthorizedKeysCommandUser nobody
+
+# === Session
 MaxSessions 2
 MaxAuthTries 2
 MaxStartups 2
+AcceptEnv LANG LC_*
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+ClientAliveInterval 30
+ClientAliveCountMax 6
+#MaxStartups 10:30:100
+
+# === Features
+AllowTcpForwarding no
+GatewayPorts no
+AllowStreamLocalForwarding no
+PermitTunnel no
 Compression no
-KerberosAuthentication no
 PermitUserEnvironment no
-StrictModes yes
+AllowAgentForwarding no
+X11Forwarding no
+
+# === Cryptography
+#HostKey /etc/ssh/ssh_host_rsa_key
+#HostKey /etc/ssh/ssh_host_ecdsa_key
+#HostKey /etc/ssh/ssh_host_ed25519_key
+#RekeyLimit default none
 KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group-exchange-sha256
 Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
 MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256,umac-128@openssh.com
