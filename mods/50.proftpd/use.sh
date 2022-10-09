@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # TODO: http://www.proftpd.org/docs/howto/TLS.html
 ufw allow ftp
 ufw allow ftps

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 chmod 751 /lib/ufw
 ufw --force reset
 

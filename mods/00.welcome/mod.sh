@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 pinfo "=================================="
 pinfo "| Walnut HS Cyber Security Club  |"
 pinfo "|            Team 1              |"

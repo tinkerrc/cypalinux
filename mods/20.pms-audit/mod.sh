@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 disnow nfs-server
 disnow rpcbind
 disnow dovecot

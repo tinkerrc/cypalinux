@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 pinfo "Please note that default-config compares stock /etc with CURRENT /etc."
 
 if [[ -d $RC/$OS/etc.zip ]]; then

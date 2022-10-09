@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if grep -q lightdm /etc/X11/default-display-manager; then
     instconf $RC/lightdm.conf /etc/lightdm/lightdm.conf
     psuccess "Inspect /etc/lightdm"

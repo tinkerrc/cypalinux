@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 instconf $RC/wordpress.conf /etc/apache2/sites-available/wordpress.conf
 a2ensite wordpress
 

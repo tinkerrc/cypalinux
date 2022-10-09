@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 pkgchk() {
     if (dpkg-query -W -f='${Status}' $1 2>/dev/null | grep 'install ok installed' &>/dev/null); then
         if (($# > 1)); then

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ufw enable http
 ufw enable https
 chown -R www-data:www-data /var/www/

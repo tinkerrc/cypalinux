@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ufw allow ftp
 ufw allow ftps
 instconf $RC/pure-ftpd.conf /etc/pure-ftpd/pure-ftpd.conf

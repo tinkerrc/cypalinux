@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [[ ! -f $DATA/backed-up ]]; then
     pinfo "Backing up files..."
     mkdir -p "$BACKUP"

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 sed -i 's/^.*guest ok.*$/    guest ok = no/' /etc/samba/smb.conf
 sed -i 's/^.*usershare allow guests.*$/usershare allow guests = no/' /etc/samba/smb.conf
 if use apparmor; then

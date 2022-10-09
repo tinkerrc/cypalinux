@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # NOTE: fs-compare uses $BACKUP/{etc,var} by default
 # NOTE: Slash placement matter!
 

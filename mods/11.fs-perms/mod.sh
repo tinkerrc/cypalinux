@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 chown root:root /
 chmod 751 /
 

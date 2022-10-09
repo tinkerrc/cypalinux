@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 echo 'nf_conntrack_ftp' >> /etc/modules
 instsecret $RC/sysctl.conf /etc/sysctl.conf
 sysctl -e -p /etc/sysctl.conf

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 pinfo "Removing pre-existing vim configurations"
 autologin_user=$(cat $DATA/autologin_user | xargs)
 if [[ -f $DATA/vim-backed-up ]]; then

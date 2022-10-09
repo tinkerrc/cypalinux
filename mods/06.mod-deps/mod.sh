@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [[ ! -f $DATA/deps-installed ]]; then
     desired_pkgs=''
     undesired_pkgs=''

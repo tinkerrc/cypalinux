@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [[ ! -d $DATA/LinEnum ]]; then
     pinfo "Acquiring script"
     git clone https://github.com/rebootuser/LinEnum $DATA/LinEnum

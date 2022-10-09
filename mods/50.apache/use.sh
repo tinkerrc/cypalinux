@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 instconf $RC/apache2.conf /etc/apache2/apache2.conf
 instconf $RC/envvars /etc/apache2/envvars
 instconf $RC/security.conf /etc/apache2/conf-available/security.conf

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ufw deny mysql
 instconf $RC/my.cnf /etc/mysql/mysql.cnf
 if [[ ! -L /etc/mysql/my.cnf ]];

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 pinfo "Acquiring package"
 apt install rkhunter
 

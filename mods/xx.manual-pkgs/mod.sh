@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # FIXME: acquire initial-status.gz for Ubuntu 20 and Debian 10 (?)
 pkglist=/var/log/installer/initial-status.gz
 if [[ -f $RC/$OS/initial-status.gz ]]; then

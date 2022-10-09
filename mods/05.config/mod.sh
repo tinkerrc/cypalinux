@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 blank $DATA/mods.configurable
 blank $DATA/mods.always_on
 blank $DATA/config

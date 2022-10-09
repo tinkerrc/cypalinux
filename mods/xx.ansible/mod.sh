@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 apt install software-properties-common
 add-apt-repository --yes --update ppa:ansible/ansible
 # TODO: implement https://github.com/dev-sec/ansible-collection-hardening

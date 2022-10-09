@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [[ ! -d $DATA/lynis ]]; then
     pinfo "Acquiring script"
     git clone --depth 1 https://github.com/CISOfy/lynis $DATA/lynis

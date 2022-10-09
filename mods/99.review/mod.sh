@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [[ -f $ERRLOG ]]; then
     echo -en "$red"
     sort -u "$ERRLOG"

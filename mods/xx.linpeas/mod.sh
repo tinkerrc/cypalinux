@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 cd "$DATA"
 if [[ ! -d $DATA/peas ]]; then
     pinfo "Acquiring script"

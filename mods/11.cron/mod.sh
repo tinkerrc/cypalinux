@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 cp -ar /var/spool/cron/ "$BACKUP/quarantine"
 rm /var/spool/cron/crontabs/*
 psuccess "Removed all user crontabs"

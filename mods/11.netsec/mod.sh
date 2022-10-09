@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 instconf $RC/interfaces /etc/network/interfaces
 instconf $RC/nsswitch.conf /etc/nsswitch.conf
 instconf $RC/host.conf /etc/host.conf

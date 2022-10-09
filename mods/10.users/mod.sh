@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # *** Ensure root user is in root group ***
 usermod -g 0 root
 

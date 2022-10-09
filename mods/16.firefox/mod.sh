@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 for home in /home/*/; do
     user=$(basename $home)
     for profile in $home/.mozilla/firefox/*.*/; do
