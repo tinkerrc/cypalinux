@@ -252,9 +252,7 @@ harden() {
     # TODO: https://github.com/trimstray/the-practical-linux-hardening-guide
     # TODO: acquire a list of services from all possible distros (for diffing against)
     # TODO: https://www.open-scap.org/security-policies/scap-security-guide/#install
-    # TEST: on Ubuntu 20
-    # TEST: on Debian 10 (buster)
-    # TODO: script the STIG's
+    # TODO: systemd/{system,user}.comf
 
     for dir in $BASE/mods/??.*/; do
         if [[ $(modpri $dir) != xx ]]; then
